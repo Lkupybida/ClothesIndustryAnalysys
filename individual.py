@@ -25,16 +25,17 @@ def calculate_CR(number_of_banks):
 
     df['Date'] = date_range
     plt.figure(figsize=(10, 6))
-    plt.plot(df['Date'], top_values, marker='o', linestyle='-', color='b', label='Top Values Sum')
-    plt.title('Sum of Top Values vs. Dates')
+    plt.plot(df['Date'], top_values, color='b', label='Top Values Sum')
+    plt.title(f'CR{number_of_banks}')
     plt.xlabel('Date')
-    plt.ylabel('Sum of Top Values')
+    plt.ylabel('Value')
     plt.xticks(rotation=45)
-    plt.legend()
     plt.grid(True)
     plt.tight_layout()
     plt.show()
 
     return top_values
 
-print(calculate_CR(3))
+print(calculate_CR(25))
+
+
