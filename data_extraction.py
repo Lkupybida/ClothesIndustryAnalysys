@@ -69,53 +69,60 @@ def find_target_column(df, column):
 
 import pandas as pd
 import matplotlib.pyplot as plt
-
+import matplotlib.colors as mcolors
 
 def plot_donut_chart(csv_file, period, all_banks):
-    # Read the CSV file
-    df = pd.read_csv(csv_file, header=0, names=['date'] + [bank[0] for bank in all_banks])
-    df['date'] = pd.to_datetime(df['date'])
-    df.set_index('date', inplace=True)
+    # Load the CSV data
+    df = pd.read_csv(csv_file, header=None)
 
-    # Format the period to match the index
-    period = pd.to_datetime(period).strftime('%Y-%m')
+    # Rename the first column to 'Period'
+    df.columns = ['Period'] + df.iloc[0, 1:].tolist()
+    df = df[1:]
 
-    # Check if the specified period exists in the dataframe
-    if period not in df.index.strftime('%Y-%m'):
-        raise ValueError(f"Period '{period}' not found in the CSV file.")
+    # Filter the data for the specified period
+    df_filtered = df[df['Period'] == period]
 
-    # Extract data for the specified period
-    data = df.loc[df.index.strftime('%Y-%m') == period].iloc[0]
+    if df_filtered.empty:
+        print(f"No data available for the specified period: {period}")
+        return
 
-    # Filter data and colors for banks present in the CSV
-    present_banks = [bank for bank in all_banks if bank[0] in data.index]
-    values = [data[bank[0]] for bank in present_banks]
-    colors = [bank[1] for bank in present_banks]
-    labels = [bank[0].capitalize() for bank in present_banks]
+    # Extract bank names and their values
+    bank_names_1 = df.columns[1:]
+    values = df_filtered.iloc[0, 1:].astype(float).tolist()  # Convert to list
+
+    # Add the 'others' category
+    bank_names_1 = list(bank_names_1) + ['others']
+    values.append(3433067383.21959)
+
+    # Create a dictionary for bank colors
+    all_all_banks = all_banks
+    all_all_banks.append(['others', 'grey'])
+    bank_colors = {bank_1[0]: bank_1[1] for bank_1 in all_all_banks}
+
+    # Get the colors in the order of the bank names and convert them to RGBA with 50% transparency
+    colors = [mcolors.to_rgba(bank_colors.get(bank_1, 'gray'), alpha=0.5) for bank_1 in bank_names_1]
 
     # Create the donut chart
-    fig, ax = plt.subplots(figsize=(10, 8))
-    wedges, texts, autotexts = ax.pie(
-        values, colors=colors, labels=labels, autopct='%1.1f%%', pctdistance=0.85,
-        wedgeprops=dict(width=0.5, edgecolor='white', alpha=0.5)  # Set transparency and keep edge color solid
-    )
+    fig, ax = plt.subplots(figsize=(10, 7), subplot_kw=dict(aspect="equal"))
 
-    # Add a circle at the center to create the donut shape
+    wedges, texts, autotexts = ax.pie(values, autopct='%1.1f%%', startangle=140, pctdistance=0.85, colors=colors)
+
+    # Draw a circle at the center to create a donut chart
     centre_circle = plt.Circle((0, 0), 0.70, fc='white')
     fig.gca().add_artist(centre_circle)
 
-    # Add title
-    plt.title(f"Bank Distribution for {period}", fontsize=16)
+    # Equal aspect ratio ensures that pie is drawn as a circle
+    ax.axis('equal')
 
-    # Adjust text properties
-    plt.setp(autotexts, size=8, weight="bold")
-    plt.setp(texts, size=10)
+    # Add labels
+    ax.legend(wedges, bank_names_1, title="Banks", loc="center left", bbox_to_anchor=(1, 0, 0.5, 1))
+    plt.setp(autotexts, size=10, weight="bold")
 
-    # Add legend
-    ax.legend(wedges, labels, title="Banks", loc="center left", bbox_to_anchor=(1, 0, 0.5, 1))
-
-    plt.tight_layout()
+    plt.title(f"Bank Values for Period: {period}")
     plt.show()
+    all_banks = [['privatbank', 'lime'], ['oschadbank', 'black'], ['sense', 'blue'],
+                 ['ukreximbank', 'magenta'], ['ukrgasbank', 'red'], ['first investment bank', 'orange']]
+    df_filtered.to_csv('data/market_share/df_filtered.csv', index=False)
 
 
 def plot_stacked_area_chart(csv_file, list):
@@ -133,6 +140,8 @@ def plot_stacked_area_chart(csv_file, list):
     for bank in list:
         if bank[0] == 'sense':
             plt.fill_between(df.index, df[bank[0]], color=bank[1], label=bank[0])
+        elif bank[0] == 'others':
+            continue
         else:
             plt.fill_between(df.index, df[bank[0]], color=bank[1], alpha=0.5, label=bank[0])
         plt.plot(df.index, df[bank[0]], color=bank[1], linewidth=3)
@@ -147,4 +156,100 @@ def plot_stacked_area_chart(csv_file, list):
     plt.show()
 
     # Show plot
+    plt.show()
+
+
+def get_market_share(csv_file):
+    df = pd.read_csv(csv_file)
+    result = pd.DataFrame()
+
+    # Assuming the first column is 'date'
+    result['date'] = df.iloc[:, 0]
+
+    # Remove the first column from df to only have numerical data
+    df = df.drop(columns=df.columns[0])
+
+    # Convert columns to numeric, coercing errors to NaN
+    df = df.apply(pd.to_numeric, errors='coerce')
+
+    # Calculate total for each row, ignoring NaN values
+    df['total'] = df.sum(axis=1, skipna=True)
+
+    # Calculate market share for each column
+    for col in df.columns[:-1]:  # exclude the 'total' column
+        result[col] = df[col] / df['total']
+
+    result.to_csv('data/market_share/TA.csv', index=False)
+
+
+get_market_share('data/original/TA_copy.csv')
+import csv
+import math
+import logging
+
+logging.basicConfig(level=logging.INFO)
+def plot_HHI(file_path):
+    result = []
+
+    with open(file_path, 'r') as csvfile:
+        csv_reader = csv.reader(csvfile)
+        next(csv_reader)  # Skip the header row
+
+        for row in csv_reader:
+            # Convert values to float, square them, and sum
+            # Skip the first column (date) and any empty strings
+            squared_sum = sum(float(val) ** 2 for val in row[1:] if val.strip())
+            result.append(squared_sum)
+
+    result_df = pd.DataFrame()
+    df = pd.read_csv(file_path)
+    result_df['date'] = df.iloc[:, 0]
+    result_df['HHI'] = result
+
+    result_df.iloc[:, 0] = pd.to_datetime(df.iloc[:, 0])
+    # result_df.set_index(df.iloc[:, 0], inplace=True)
+    plt.figure(figsize=(14, 8))
+    plt.style.use('seaborn-v0_8-poster')
+    plt.title(os.path.splitext('HHI')[0])
+    plt.plot(result_df.iloc[:, 0], result_df['HHI'])
+    plt.legend()
+    plt.grid(visible=False)
+    plt.show()
+
+def plot_theil(file_path):
+    result = []
+
+    with open(file_path, 'r') as csvfile:
+        csv_reader = csv.reader(csvfile)
+        next(csv_reader)  # Skip the header row
+
+        for row_num, row in enumerate(csv_reader, start=2):  # Start from 2 to account for header
+            try:
+                # Convert values to float, multiply by log of itself, and sum
+                # Skip the first column (date) and any empty or zero values
+                log_product_sum = sum(
+                    float(val) * math.log(float(val))
+                    for val in row[1:]
+                    if val.strip() and float(val) > 0
+                )
+                result.append(log_product_sum)
+            except ValueError as e:
+                logging.error(f"Error in row {row_num}: {e}")
+                logging.info(f"Problematic row: {row}")
+                # You can choose to either continue to the next row or raise the exception
+                continue
+
+    result_df = pd.DataFrame()
+    df = pd.read_csv(file_path)
+    result_df['date'] = df.iloc[:, 0]
+    result_df['Theil'] = result
+
+    result_df.iloc[:, 0] = pd.to_datetime(df.iloc[:, 0])
+    # result_df.set_index(df.iloc[:, 0], inplace=True)
+    plt.figure(figsize=(14, 8))
+    plt.style.use('seaborn-v0_8-poster')
+    plt.title('Theil Index')
+    plt.plot(result_df.iloc[:, 0], result_df['Theil'])
+    plt.legend()
+    plt.grid(visible=False)
     plt.show()
