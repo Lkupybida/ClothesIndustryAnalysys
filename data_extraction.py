@@ -92,7 +92,7 @@ def plot_donut_chart(csv_file, period, all_banks):
 
     # Add the 'others' category
     bank_names_1 = list(bank_names_1) + ['others']
-    values.append(3433067383.21959)
+    values.append(3433067383.21959 - 1921129277)
 
     # Create a dictionary for bank colors
     all_all_banks = all_banks
@@ -254,7 +254,7 @@ def plot_theil(file_path):
     plt.grid(visible=False)
     plt.show()
 
-def make_quarterly(csv, differenced =  True):
+def make_quarterly(csv, differenced = True):
     if differenced == False:
         df = pd.read_csv('data/original/' + csv)
     else:
