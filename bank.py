@@ -59,4 +59,4 @@ def remove_rolling_sum(file_path, out_path):
 
 #remove_rolling_sum('data/original/private_total_income.csv', 'data/differenced/private_total_income.csv')
 
-aggregate_data('Total assets', 'private_total_assets.csv', 3)
+aggregate_data('Total assets', 'private_total_assets.csv', 0)
