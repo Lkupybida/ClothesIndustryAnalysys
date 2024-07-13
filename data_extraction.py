@@ -262,6 +262,6 @@ def make_quarterly(csv, differenced =  True):
     df = df.rename(columns={df.columns[0]: 'date'})
     df.set_index(df.columns[0], inplace=True)
     df.index = pd.to_datetime(df.index, format='%Y-%m')
-    df_quarterly = df.resample('QE').sum()
+    df_quarterly = df.resample('Q').sum()
     df_quarterly.index = pd.to_datetime(df_quarterly.index, format='%Y-%m')
     df_quarterly.to_csv('data/quarterly/' + csv)

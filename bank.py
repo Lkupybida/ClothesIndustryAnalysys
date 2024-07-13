@@ -4,8 +4,7 @@ import os
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 
-banks = ["privatbank", "oschadbank", "ukreximbank", "ukrgasbank", "sense", "first investment bank"]
-
+banks = ["raiffeisen", "fuib", "ukrsibbank", "universal", "agricole", "otp", "citibank", "pivdenny", "kredobank", "procredit", "tascombank", "ing", "a - bank"]
 def generate_date_range(start, end):
     """Generate a list of month-end dates from start to end."""
     date_range = pd.date_range(start=start, end=end, freq='M').strftime('%Y-%m').tolist()
@@ -58,6 +57,6 @@ def remove_rolling_sum(file_path, out_path):
             df_diff.loc[idx] = df.loc[idx]
     df_diff.to_csv(out_path)
 
-remove_rolling_sum('data/original/total_expenses.csv', 'data/differenced/total_expenses.csv')
+remove_rolling_sum('data/original/private_total_income.csv', 'data/differenced/private_total_income.csv')
 
-# aggregate_data('Total expenses', 'total_expenses.csv', 3)
+#aggregate_data('Total income', 'private_total_income.csv', 3)
