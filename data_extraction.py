@@ -254,17 +254,22 @@ def plot_theil(file_path):
     plt.grid(visible=False)
     plt.show()
 
-def make_quarterly(csv, differenced = True):
+def make_quarterly(csv, differenced = True, dollarized = False):
     if differenced == False:
         df = pd.read_csv('data/original/' + csv)
+    elif dollarized == True:
+        df = pd.read_csv('data/dollarized/' + csv)
     else:
         df = pd.read_csv('data/differenced/' + csv)
     df = df.rename(columns={df.columns[0]: 'date'})
     df.set_index(df.columns[0], inplace=True)
     df.index = pd.to_datetime(df.index, format='%Y-%m')
-    df_quarterly = df.resample('Q').sum()
+    df_quarterly = df.resample('QE').sum()
     df_quarterly.index = pd.to_datetime(df_quarterly.index, format='%Y-%m')
-    df_quarterly.to_csv('data/quarterly/' + csv)
+    if dollarized == True:
+        df_quarterly.to_csv('data/dollarized_quaterly/' + csv)
+    else:
+        df_quarterly.to_csv('data/quarterly/' + csv)
 
 def dolarize(csv, differenced = True):
     usd = pd.read_csv('data/original/USD.csv')
