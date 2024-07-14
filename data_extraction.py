@@ -265,3 +265,72 @@ def make_quarterly(csv, differenced = True):
     df_quarterly = df.resample('Q').sum()
     df_quarterly.index = pd.to_datetime(df_quarterly.index, format='%Y-%m')
     df_quarterly.to_csv('data/quarterly/' + csv)
+
+def dolarize(csv, differenced = True):
+    usd_t = pd.read_csv('data/original/USD.csv')
+    usd = pd.DataFrame()
+    usd = usd_t.transpose()
+    usd.columns = usd.iloc[0]
+    usd = usd.drop(usd.index[0])
+    usd.index = pd.to_datetime(usd.index)
+
+    if differenced == False:
+        df = pd.read_csv('data/original/' + csv)
+    else:
+        df = pd.read_csv('data/differenced/' + csv)
+    df = df.rename(columns={df.columns[0]: 'date'})
+    print(usd['usd'])
+    df_new = pd.DataFrame()
+
+    for col in df.columns:
+        if col not in ['date', '', 'Unnamed: 0']:
+            df_new[col] = df[col] / usd['usd']
+        # else:
+        #     df_new[col] = df[col]
+    df_new_new = pd.concat([df[df.columns[0]], df_new], axis=1)
+    df_new_new.to_csv('data/dollarized/' + csv, index=False)
+    df_new.to_csv('data/dollarized/dol' + csv, index=False)
+
+
+def convert_uah_to_usd(csv, differenced = True):
+    if differenced == False:
+        bank_data_file = 'data/original/' + csv
+    else:
+        bank_data_file = 'data/differenced/' + csv
+    # Read the CSV files
+    bank_data_t = pd.read_csv(bank_data_file, index_col=0, parse_dates=True)
+    bank_data = bank_data_t.transpose()
+
+    exchange_rates = pd.read_csv('data/original/USD.csv', index_col='date', parse_dates=True)
+
+    # Convert the 'date' column to datetime and set it as the index
+    exchange_rates['date'] = pd.to_datetime(exchange_rates['date'])
+    exchange_rates.set_index('date', inplace=True)
+
+    # Ensure the index of exchange_rates is in the same format as bank_data
+    exchange_rates.index = exchange_rates.index.to_period('M').to_timestamp()
+
+    # Merge the dataframes on the date index
+    merged_data = bank_data.merge(exchange_rates, left_index=True, right_index=True, how='left')
+
+    # Convert UAH to USD
+    for column in merged_data.columns[:-1]:  # Exclude the 'usd' column
+        merged_data[column] = merged_data[column] / merged_data['usd']
+
+    # Drop the 'usd' column as it's no longer needed
+    merged_data = merged_data.drop('usd', axis=1)
+    merged_data.to_csv('data/dollarized/' + csv, index=False)
+
+
+def transpose_resample(csv):
+    df = pd.read_csv(csv)
+    df = df.transpose()
+    df.columns = df.iloc[0]
+    df = df[1:]
+    df.reset_index(inplace=True)
+    df = df.rename(columns={df.columns[0]: 'date'})
+    df.set_index('date', inplace=True)
+    df.index = pd.to_datetime(df.index, format="%Y-%m-%d").strftime("%Y-%m")
+    new_name = 'data/original/USD.csv'
+    df.to_csv(new_name)
+
