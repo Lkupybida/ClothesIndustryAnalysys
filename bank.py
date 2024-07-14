@@ -4,7 +4,7 @@ import os
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 
-banks = ["raiffeisen", "fuib", "ukrsibbank", "universal", "agricole", "otp", "citibank", "pivdenny", "kredobank", "procredit", "tascombank", "ing", "a - bank"]
+banks = ["приватбанк", "ощадбанк", "укргазбанк", "укрексім", "сенс", "перший інвестиційний"]
 def generate_date_range(start, end):
     """Generate a list of month-end dates from start to end."""
     date_range = pd.date_range(start=start, end=end, freq='M').strftime('%Y-%m').tolist()
