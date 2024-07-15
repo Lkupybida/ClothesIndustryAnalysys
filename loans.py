@@ -4,7 +4,8 @@ import os
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 
-banks = ["приватбанк", "ощадбанк", "укргазбанк", "укрексім", "сенс", "перший інвестиційний"]
+# banks = ["приватбанк", "ощадбанк", "укргазбанк", "укрексім", "сенс", "перший інвестиційний"]
+banks = ["райффайзен", "укрсиббанк", "південний", "кредобанк", "універсал", "таскомбанк", "а-банк", "сітібанк", "агріколь", "отп", "прокредит", "інг"]
 def generate_date_range(start, end):
     """Generate a list of month-end dates from start to end."""
     date_range = pd.date_range(start=start, end=end, freq='M').strftime('%Y-%m').tolist()
@@ -42,7 +43,7 @@ def aggregate_data(output_csv):
                                     result_df.at[new_date_str, bank_from_list] = row['Loan']
                                 else:
                                     result_df.at[new_date_str, bank_from_list] += row['Loan']
-                                break    
+                                break
 
     # result_df = result_df.iloc[[len(result_df)-1] + list(range(len(result_df)-1))]
     
@@ -50,13 +51,13 @@ def aggregate_data(output_csv):
 
 
 
-# aggregate_data('loans.csv')
+# aggregate_data('private_loans.csv')
 
 
 # Load the data
-df = pd.read_csv('data/quarterly/loans.csv')
-df.columns = ["date", "приватбанк", "ощадбанк", "укргазбанк", "укрексім", "сенс", "перший інвестиційний"]
-banks = ["приватбанк", "ощадбанк", "укргазбанк", "укрексім", "сенс", "перший інвестиційний"]
+df = pd.read_csv('data/quarterly/private_loans.csv')
+df.columns = ["date", "райффайзен", "укрсиббанк", "південний", "кредобанк", "універсал", "таскомбанк", "а-банк", "сітібанк", "агріколь", "отп", "прокредит", "інг"]
+banks = ["райффайзен", "укрсиббанк", "південний", "кредобанк", "універсал", "таскомбанк", "а-банк", "сітібанк", "агріколь", "отп", "прокредит", "інг"]
 
 # Initialize an empty dictionary to store results
 result_data = {bank: [] for bank in banks}
@@ -76,5 +77,5 @@ result_df = pd.DataFrame(result_data)
 
 # Save the result to a CSV file
 result_df.set_index('date', inplace=True)
-result_df.to_csv('data/quarterly/new_loans.csv')
+result_df.to_csv('data/quarterly/new_private_loans.csv')
 
