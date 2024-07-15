@@ -8,5 +8,10 @@ if __name__=="__main__":
     #make_quarterly('private_equity_capital.csv', False)
     # make_quarterly('total_assets.csv', False)
     # make_quarterly('total_equity_capital.csv', False)
-    dolarize('TA.csv', False)
-    make_quarterly('TA.csv', True, True)
+    # dolarize('TA.csv', False)
+    # make_quarterly('TA.csv', True, True)
+    # get_loans_kved()
+
+    # process_loan_data('original_dataset/Loans_KVED', 'original_dataset/names.csv')
+
+    group_banks_wrapper()

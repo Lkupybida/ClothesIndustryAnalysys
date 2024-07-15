@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 from pandas.tseries.offsets import DateOffset
+import openpyxl
 
 def extract_bank_data(root_folder, sheet_name, column, file):
     target_banks = ["privatbank", "oschadbank", "ukreximbank", "ukrgasbank", "alfa", "sense", "first investment bank"]
@@ -301,4 +302,165 @@ def transpose_resample(csv):
     df.index = pd.to_datetime(df.index, format="%Y-%m-%d").strftime("%Y-%m")
     new_name = 'data/original/USD.csv'
     df.to_csv(new_name)
+def get_loans_kved():
+    start = '/Loans_KVED_'
+    end = '-01.xlsx'
+    for i in ['2020', '2021', '2022', '2023', '2024']:
+        for j in range(1, 12):
+            if i == '2024' and j == 7:
+                break
+            if j < 10:
+                file_path = 'original_dataset/Loans_KVED/' + i + start + i + '-0' + str(j) + end
+            else:
+                file_path = 'original_dataset/Loans_KVED/' + i + start + i + '-' + str(j) + end
+            if file_path not in ['original_dataset/Loans_KVED/2021/Loans_KVED_2021-01-01.xlsx', 'original_dataset/Loans_KVED/2020/Loans_KVED_2020-01-01.xlsx', 'original_dataset/Loans_KVED/2022/Loans_KVED_2022-04-01.xlsx', 'original_dataset/Loans_KVED/2022/Loans_KVED_2022-05-01.xlsx']:
+                df = pd.read_excel(file_path, header=5)
+                new_df = pd.DataFrame()
+                bank_col = find_target_column(df, '2')
+                kved_num_col = find_target_column(df, '3')
+                kved_name_col = find_target_column(df, '4')
+                credit_col = find_target_column(df, '5')
+                npl_col = find_target_column(df, '8')
+                if bank_col:
+                    new_df['bank'] = df[bank_col]
+                if kved_num_col:
+                    new_df['kved_num'] = df[kved_num_col]
+                if kved_name_col:
+                    new_df['kved_name'] = df[kved_name_col]
+                if credit_col:
+                    new_df['credit'] = df[credit_col]
+                if npl_col:
+                    new_df['npl'] = df[npl_col]
+                new_df.to_csv('original_dataset/loans_csv/' + i + '-' + str(j) + '.csv', index=False)
+
+def process_loan_data(base_folder, bank_names_csv):
+    # Read the bank names CSV
+    bank_names_df = pd.read_csv(bank_names_csv, header=None, names=['English', 'Ukrainian'])
+    bank_names = dict(zip(bank_names_df['Ukrainian'], bank_names_df['English']))
+
+    # Dictionary to store data for each bank
+    bank_data = {}
+
+    # Iterate through years 2020 to 2024
+    for year in range(2020, 2025):
+        folder_path = os.path.join(base_folder, str(year))
+        if not os.path.exists(folder_path):
+            continue
+
+        # Find the Excel file in the folder
+        for file in os.listdir(folder_path):
+            if file.startswith("Loans_KVED_") and file.endswith(".xlsx"):
+                file_path = os.path.join(folder_path, file)
+                date_str = file[11:21]  # Extract date from filename
+                date = datetime.strptime(date_str, "%Y-%m-%d").date()
+
+                # Read the Excel file
+                df = pd.read_excel(file_path, usecols=[1, 2, 4, 7])
+                df.columns = ['Bank', 'KVED', 'Loan_Amount', 'NPL_Amount']
+
+                # Process each row in the dataframe
+                for _, row in df.iterrows():
+                    bank_ukr = str(row['Bank'])  # Convert to string to handle non-string values
+                    if pd.isna(bank_ukr) or bank_ukr == '':
+                        continue  # Skip rows with empty bank names
+                    bank_eng = bank_names.get(bank_ukr, bank_ukr)  # Use English name if available, otherwise use Ukrainian
+                    kved = row['KVED']
+                    loan_amount = row['Loan_Amount']
+                    npl_amount = row['NPL_Amount']
+
+                    if bank_eng not in bank_data:
+                        bank_data[bank_eng] = {'loans': {}, 'npl': {}}
+
+                    if kved not in bank_data[bank_eng]['loans']:
+                        bank_data[bank_eng]['loans'][kved] = {}
+                        bank_data[bank_eng]['npl'][kved] = {}
+
+                    bank_data[bank_eng]['loans'][kved][date] = loan_amount
+                    bank_data[bank_eng]['npl'][kved][date] = npl_amount
+
+    # Create CSV files for each bank
+    for bank, data in bank_data.items():
+        # Replace spaces with underscores in bank name and ensure it's a string
+        bank_filename = str(bank).replace(' ', '_')
+
+        # Create loans CSV
+        loans_df = pd.DataFrame(data['loans'])
+        loans_df.index.name = 'Date'
+        loans_df.to_csv('data/loans/raw/loans/' + f"{bank_filename}_loans.csv")
+
+        # Create NPL CSV
+        npl_df = pd.DataFrame(data['npl'])
+        npl_df.index.name = 'Date'
+        npl_df.to_csv('data/loans/raw/npl/' + f"{bank_filename}_npl.csv")
+
+    print("Processing complete. CSV files have been created for each bank.")
+
+
+def merge_and_sort_csvs(csv_paths, name, npl):
+    # Read and concatenate all CSV files
+    df_list = [pd.read_csv('data/loans/raw/' + npl + '/' + trim_string(file, 21, 10) + '_' + npl + '.csv') for file in csv_paths]
+    merged_df = pd.concat(df_list, ignore_index=True)
+
+    # Convert the first column to datetime
+    merged_df.iloc[:, 0] = pd.to_datetime(merged_df.iloc[:, 0])
+
+    # Sort by the first column (dates)
+    sorted_df = merged_df.sort_values(by=merged_df.columns[0])
+
+    # Reset the index
+    sorted_df.reset_index(drop=True, inplace=True)
+
+    sorted_df.to_csv('data/loans/grouped/' + npl + '/' + name + '.csv', index=False)
+
+def delete_csv(file_path):
+    try:
+        if os.path.exists(file_path):
+            os.remove(file_path)
+            print(f"The file {file_path} has been deleted successfully.")
+        else:
+            print(f"The file {file_path} does not exist.")
+    except Exception as e:
+        print(f"An error occurred while trying to delete {file_path}: {str(e)}")
+
+def group_banks(list, name):
+    merge_and_sort_csvs(list, name, 'npl')
+    merge_and_sort_csvs(list, name, 'loans')
+    # for bank in list:
+        # delete_csv('data/loans/raw/npl/' + bank + '_npl.csv')
+        # delete_csv('data/loans/raw/loans/' + bank + '_loans.csv')
+
+
+def find_files_with_name(folder_path, name):
+    matching_files = []
+
+    for root, dirs, files in os.walk(folder_path):
+        for file in files:
+            if name.lower() in file.lower():
+                matching_files.append(os.path.join(root, file))
+
+    return matching_files
+
+def trim_string(s, n, m):
+    if len(s) < n + m:
+        return ""
+    return s[n:-m or None]
+
+def group_banks_wrapper():
+    bank_list = []
+
+    with open('original_dataset/names.csv', 'r', encoding='utf-8') as file:
+        csv_reader = csv.reader(file)
+        for row in csv_reader:
+            if row and row[0]:  # Check if the row is not empty
+                bank = {
+                    'english': row[0].strip(),
+                    'ukrainian': row[1].strip() if len(row) > 1 else ''
+                }
+                bank_list.append(bank)
+
+    # Print the result
+    for bank in bank_list:
+        print(bank['ukrainian'])
+        group_banks(find_files_with_name('data/loans/raw/loans/', bank['ukrainian']), bank['english'])
+
 
