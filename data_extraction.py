@@ -4,6 +4,7 @@ import numpy as np
 from datetime import datetime
 from pandas.tseries.offsets import DateOffset
 import openpyxl
+import geopandas as gpd
 
 def extract_bank_data(root_folder, sheet_name, column, file):
     target_banks = ["privatbank", "oschadbank", "ukreximbank", "ukrgasbank", "alfa", "sense", "first investment bank"]
@@ -463,4 +464,89 @@ def group_banks_wrapper():
         print(bank['ukrainian'])
         group_banks(find_files_with_name('data/loans/raw/loans/', bank['ukrainian']), bank['english'])
 
+def read_bank_filials(csv_file):
+    # Read the CSV data
+    data = pd.read_csv(csv_file, header=None)
 
+
+def plot_bank_filials(data):
+    # Assuming the first row contains region names and the second row contains counts
+    regions = data.iloc[0].tolist()
+    counts = data.iloc[1].tolist()
+
+    # Create a new DataFrame with regions and counts
+    data = pd.DataFrame({'region': regions, 'count': counts})
+
+    # Create a mapping between Ukrainian and English region names
+    region_mapping = {
+        'Вінніцька': 'Vinnytsya',
+        'Волинська': 'Volyn',
+        'Дніпропетровська': "Dnipropetrovs'k",
+        'Донецька': "Donets'k",
+        'Житомирська': 'Zhytomyr',
+        'Закарпатська': 'Zakarpattia',
+        'Запоріжська': 'Zaporizhia',
+        'ІваноФранківська': "Ivano-Frankivs'k",
+        'Київ': 'Kiev City',
+        'Київська': 'Kiev',
+        'Кіровоградська': 'Kirovohrad',
+        'Луганська': "Luhans'k",
+        'Львівська': "L'viv",
+        'Миколаївська': 'Mykolayiv',
+        'Одеська': 'Odessa',
+        'Полтавська': 'Poltava',
+        'Рівненська': 'Rivne',
+        'Сумська': 'Sumy',
+        'Тернопільська': "Ternopil'",
+        'Харківська': 'Kharkiv',
+        'Херсонська': 'Kherson',
+        'Хмельницька': "Khmel'nyts'kyy",
+        'Черкаська': 'Cherkasy',
+        'Чернігівська': 'Chernihiv',
+        'Чернівецька': 'Chernivtsi',
+        'АРК': 'Crimea'
+    }
+
+    # Map the Ukrainian names to English names
+    data['region_en'] = data['region'].map(region_mapping)
+
+    # Read the shapefile
+    ukraine = gpd.read_file('original_dataset/gadm41_UKR_shp/gadm41_UKR_1.shp')
+
+    # Merge the data with the shapefile
+    ukraine = ukraine.merge(data, left_on='NAME_1', right_on='region_en', how='left')
+
+    # Convert count to numeric, replacing NaN with 0
+    ukraine['count'] = pd.to_numeric(ukraine['count'], errors='coerce').fillna(0)
+
+    # Create the plot
+    fig, ax = plt.subplots(1, 1, figsize=(15, 10))
+
+    # Plot the map
+    ukraine.plot(column='count', ax=ax, legend=True,
+                 cmap='Blues', missing_kwds={'color': 'lightgrey'},
+                 legend_kwds={'label': 'Number of Bank Filials'})
+
+    # Remove axis
+    ax.axis('off')
+
+    # Add a title
+    plt.title('Bank Filials in Ukraine by Region', fontsize=16)
+
+    # Show the plot
+    plt.show()
+
+def extract_filials():
+    df = pd.read_excel('original_dataset/Kil_pidr_2024-07-01.xlsx', header=6, sheet_name='Діючі підрозділи_на 01.07.24')
+    new_df = pd.DataFrame()
+    bank_col = find_target_column(df, 'Назва банку')
+    print(df.columns)
+    if bank_col:
+        new_df['bank'] = df[bank_col]
+    regions = ['Вінніцька','Волинська','Дніпропетровська','Донецька','Житомирська','Закарпатська','Запоріжська','ІваноФранківська','Київ','Київська','Кіровоградська','Луганська','Львівська','Миколаївська','Одеська','Полтавська','Рівненська','Сумська','Тернопільська','Харківська','Херсонська','Хмельницька','Черкаська','Чернігівська','Чернівецька','АРК']
+    print(len(regions))
+    for r in range(5, 31):
+        region = df.columns[r]
+        new_df[region] = df[regions]
+
+    new_df.to_csv('data/loans/regions.csv', index=False)
