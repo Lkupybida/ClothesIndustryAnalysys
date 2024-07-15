@@ -50,9 +50,31 @@ def aggregate_data(output_csv):
 
 
 
-# aggregate_data('loans.csv') 
+# aggregate_data('loans.csv')
 
 
-df = pd.read_excel('data/quarterly/loans.csv')
+# Load the data
+df = pd.read_csv('data/quarterly/loans.csv')
+df.columns = ["date", "приватбанк", "ощадбанк", "укргазбанк", "укрексім", "сенс", "перший інвестиційний"]
+banks = ["приватбанк", "ощадбанк", "укргазбанк", "укрексім", "сенс", "перший інвестиційний"]
+
+# Initialize an empty dictionary to store results
+result_data = {bank: [] for bank in banks}
+result_data['date'] = []
+
+# Process each row
 for _, row in df.iterrows():
-    print(row)
+    result_data['date'].append(row['date'])
+    for bank in banks:
+        if row['date'] in ['2020-12-31', '2022-03-31', '2022-06-30', '2024-06-30']:
+            result_data[bank].append((row[bank] / 2) * 3)
+        else:
+            result_data[bank].append(row[bank])
+
+# Convert the result dictionary to a DataFrame
+result_df = pd.DataFrame(result_data)
+
+# Save the result to a CSV file
+result_df.set_index('date', inplace=True)
+result_df.to_csv('data/quarterly/new_loans.csv')
+
