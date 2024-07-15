@@ -20,12 +20,16 @@ def aggregate_data(output_csv):
         if os.path.isdir(year_path):
             for month_file in os.listdir(year_path):
                 month_path = os.path.join(year_path, month_file)
+                print(month_path)
                 if month_file.endswith('.xlsx'):
                     # Extract date from the filename and subtract one month
-                    date_str = f"{year}-{month_file.split('-')[1]}"
+                    date_str = f"{month_file.split('_')[2][:4]}-{month_file.split('-')[1]}"
+                    print(date_str)
                     date_obj = datetime.strptime(date_str, '%Y-%m')
                     date_obj -= relativedelta(months=1)
                     new_date_str = date_obj.strftime('%Y-%m')
+                    print(new_date_str)
+                    print('-------')
                     
                     df = pd.read_excel(month_path, skiprows=4, usecols=[1, 4])
                     df.columns = ['Bank', 'Loan']
@@ -38,14 +42,12 @@ def aggregate_data(output_csv):
                         for bank_from_list in banks:
                             if bank_from_list in row['Bank'].lower():
                                 if pd.isna(result_df.at[new_date_str, bank_from_list]):
-                                    if (new_date_str.split("-")[0] == '2022'):
-                                        print(result_df.keys)
                                     result_df.at[new_date_str, bank_from_list] = row['Loan']
                                 else:
                                     result_df.at[new_date_str, bank_from_list] += row['Loan']
                                 break    
 
-    result_df = result_df.iloc[[len(result_df)-1] + list(range(len(result_df)-1))]
+    # result_df = result_df.iloc[[len(result_df)-1] + list(range(len(result_df)-1))]
     
     result_df.to_csv(output_csv)
 
