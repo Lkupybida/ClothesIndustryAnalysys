@@ -20,7 +20,6 @@ def aggregate_data(output_csv):
         if os.path.isdir(year_path):
             for month_file in os.listdir(year_path):
                 month_path = os.path.join(year_path, month_file)
-                print(month_path)
                 if month_file.endswith('.xlsx'):
                     # Extract date from the filename and subtract one month
                     date_str = f"{month_file.split('_')[2][:4]}-{month_file.split('-')[1]}"
@@ -28,8 +27,6 @@ def aggregate_data(output_csv):
                     date_obj = datetime.strptime(date_str, '%Y-%m')
                     date_obj -= relativedelta(months=1)
                     new_date_str = date_obj.strftime('%Y-%m')
-                    print(new_date_str)
-                    print('-------')
                     
                     df = pd.read_excel(month_path, skiprows=4, usecols=[1, 4])
                     df.columns = ['Bank', 'Loan']
@@ -52,6 +49,10 @@ def aggregate_data(output_csv):
     result_df.to_csv(output_csv)
 
 
-#remove_rolling_sum('data/original/net_interest_income.csv', 'data/differenced/net_interest_income.csv')
 
-aggregate_data('loans.csv') 
+# aggregate_data('loans.csv') 
+
+
+df = pd.read_excel('data/quarterly/loans.csv')
+for _, row in df.iterrows():
+    print(row)
