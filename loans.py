@@ -12,7 +12,7 @@ def generate_date_range(start, end):
 
 def aggregate_data(output_csv):
     base_dir = 'original_dataset/Loans_KVED(1)'
-    date_range = generate_date_range('2020-02', '2024-06')
+    date_range = generate_date_range('2020-01', '2024-06')
     result_df = pd.DataFrame(index=date_range, columns=banks)
     
     for year in os.listdir(base_dir):
@@ -31,13 +31,15 @@ def aggregate_data(output_csv):
                     df.columns = ['Bank', 'Loan']
                     
                     for _, row in df.iterrows():
-                        if row['Bank'] == '272 АТ "АЛЬФА-БАНК':
+                        if row['Bank'] == '272 АТ "АЛЬФА-БАНК"':
                             row['Bank'] = "сенс"
                         if not isinstance(row['Bank'], str):
                             continue
                         for bank_from_list in banks:
                             if bank_from_list in row['Bank'].lower():
                                 if pd.isna(result_df.at[new_date_str, bank_from_list]):
+                                    if (new_date_str.split("-")[0] == '2022'):
+                                        print(result_df.keys)
                                     result_df.at[new_date_str, bank_from_list] = row['Loan']
                                 else:
                                     result_df.at[new_date_str, bank_from_list] += row['Loan']
