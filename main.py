@@ -13,5 +13,4 @@ if __name__=="__main__":
     # get_loans_kved()
 
     # process_loan_data('original_dataset/Loans_KVED', 'original_dataset/names.csv')
-
     group_banks_wrapper()
