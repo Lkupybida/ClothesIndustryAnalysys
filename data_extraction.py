@@ -528,7 +528,12 @@ def plot_bank_filials(bank):
 
     # Create the plot
     fig, ax = plt.subplots(1, 1, figsize=(15, 10))
-    colors = ["#D9EDBF", "#8ECAE6", "#003049"]  # White to #209AB7
+    # colors = ["#cead5f", "#8ECAE6", "#003049"]
+    # colors = ["#D9EDBF", "#8ECAE6", "#003049"]
+    colors = ["#FFFFD8", "#D9EDBF", "#8ECAE6", "#003049"]
+    # colors = ["#FFFFD8", "#E1F3BF", "#B0DEB7", "#68C3BE", "#319DC1", "#236DAC", "#233B93", "#081B5D"]
+    # colors = ["#FFFFD8", "#E1F3BF", "#B0DEB7", "#8ECAE6", "#219ebc", "#003049"]
+    # White to #209AB7
     n_bins = 10000  # Discretizes the interpolation into bins
 
     # Define custom colormap
