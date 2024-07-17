@@ -9,6 +9,11 @@ from matplotlib.colors import ListedColormap
 from matplotlib.colors import LinearSegmentedColormap, LogNorm
 from matplotlib.font_manager import FontProperties
 from matplotlib.patheffects import withStroke
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+from typing import List, Tuple
+import colorsys
+import seaborn as sns
 
 def extract_bank_data(root_folder, sheet_name, column, file):
     target_banks = ["privatbank", "oschadbank", "ukreximbank", "ukrgasbank", "alfa", "sense", "first investment bank"]
@@ -647,3 +652,301 @@ def read_shp(file_path):
 
     # Print the columns
     print(gdf.head())
+
+
+def plot_top_5_columns(csv_path, dates):
+    # Read the CSV file
+    df = pd.read_csv(csv_path, parse_dates=['Date'])
+
+    # Set 'Date' column as index
+    df.set_index('Date', inplace=True)
+
+    # Create a figure with subplots for each date
+    fig, axes = plt.subplots(len(dates), 1, figsize=(12, 6 * len(dates)), squeeze=False)
+    fig.tight_layout(pad=5.0)
+
+    for i, date in enumerate(dates):
+        # Convert string to datetime if necessary
+        if isinstance(date, str):
+            date = datetime.strptime(date, '%Y-%m-%d')
+
+        # Get the row for the specified date
+        row = df.loc[date]
+
+        # Sort the values and get the top 5
+        top_5 = row.nlargest(5)
+
+        # Create a bar plot for the top 5 values
+        ax = axes[i, 0]
+        top_5.plot(kind='bar', ax=ax)
+
+        # Customize the plot
+        ax.set_title(f'Top 5 Columns on {date.strftime("%Y-%m-%d")}')
+        ax.set_ylabel('Value')
+        ax.set_xlabel('Column')
+        ax.tick_params(axis='x', rotation=45)
+
+        # Add value labels on top of each bar
+        for j, v in enumerate(top_5):
+            ax.text(j, v, f'{v:.2f}', ha='center', va='bottom')
+
+    plt.show()
+
+
+def plot_ranking_flow(csv_path, dates):
+    # Read the CSV file
+    df = pd.read_csv(csv_path, parse_dates=['Date'])
+
+    # Set 'Date' as index
+    df.set_index('Date', inplace=True)
+
+    # Get top 5 columns for each date
+    top_5_by_date = {}
+    for target_date in dates:
+        # Find the closest date in the DataFrame
+        closest_date = min(df.index, key=lambda x: abs(x - target_date))
+        date_data = df.loc[closest_date]
+
+        # Convert to numeric, replacing non-numeric values with NaN
+        numeric_data = pd.to_numeric(date_data, errors='coerce')
+        top_5 = numeric_data.nlargest(5)
+        top_5_by_date[target_date] = top_5.index.tolist()
+
+    # Prepare data for Sankey diagram
+    nodes = []
+    for date in dates:
+        nodes.extend([f"{column} {date.strftime('%Y-%m')}" for column in top_5_by_date[date]])
+
+    node_indices = {node: i for i, node in enumerate(nodes)}
+
+    links_source = []
+    links_target = []
+    for i in range(len(dates) - 1):
+        date1, date2 = dates[i], dates[i + 1]
+        for column in top_5_by_date[date1]:
+            if column in top_5_by_date[date2]:
+                links_source.append(node_indices[f"{column} {date1.strftime('%Y-%m')}"])
+                links_target.append(node_indices[f"{column} {date2.strftime('%Y-%m')}"])
+
+    # Create the Sankey diagram
+    fig = go.Figure(data=[go.Sankey(
+        node=dict(
+            pad=15,
+            thickness=20,
+            line=dict(color="black", width=0.5),
+            label=nodes,
+            color="blue"
+        ),
+        link=dict(
+            source=links_source,
+            target=links_target,
+            value=[1] * len(links_source)
+        ))])
+
+    fig.update_layout(title_text="Top 5 Columns Ranking Flow", font_size=10)
+    fig.show()
+
+
+def create_sankey_diagram(csv_path, date_list):
+    # Read the CSV file
+    df = pd.read_csv(csv_path, parse_dates=['Date'])
+
+    # Filter the dataframe based on the provided dates
+    df_filtered = df[df['Date'].isin(date_list)]
+
+    # Sort the dataframe by date
+    df_filtered = df_filtered.sort_values('Date')
+
+    # Get the top 5 columns (excluding 'Date') based on the sum of values
+    top_columns = df_filtered.drop('Date', axis=1).sum().nlargest(5).index.tolist()
+
+    # Prepare data for Sankey diagram
+    source = []
+    target = []
+    value = []
+    label = []
+
+    for i in range(len(df_filtered) - 1):
+        current_date = df_filtered.iloc[i]['Date']
+        next_date = df_filtered.iloc[i + 1]['Date']
+
+        for col in top_columns:
+            source.append(i * len(top_columns) + top_columns.index(col))
+            target.append((i + 1) * len(top_columns) + top_columns.index(col))
+            value.append(df_filtered.iloc[i + 1][col])
+
+        label.extend([f"{col}\n{current_date.strftime('%Y-%m-%d')}" for col in top_columns])
+
+    # Add labels for the last date
+    label.extend([f"{col}\n{next_date.strftime('%Y-%m-%d')}" for col in top_columns])
+
+    # Create Sankey diagram
+    fig = go.Figure(data=[go.Sankey(
+        node=dict(
+            pad=15,
+            thickness=20,
+            line=dict(color="black", width=0.5),
+            label=label,
+            color="blue"
+        ),
+        link=dict(
+            source=source,
+            target=target,
+            value=value
+        ))])
+
+    fig.update_layout(title_text="Top 5 Columns Flow Over Time", font_size=10)
+    fig.show()
+
+# Example usage:
+# fig = create_sankey_diagram('path/to/your/csv/file.csv', ['2020-02-01', '2020-03-01', '2020-04-01'])
+# fig.show()
+
+
+def create_alluvial_diagram(csv_path: str, dates: List[str]) -> go.Figure:
+    try:
+        # Read the CSV file
+        df = pd.read_csv(csv_path, parse_dates=['Date'])
+        print(f"CSV loaded. Shape: {df.shape}")
+
+        # Filter the dataframe based on the specified dates
+        df_filtered = df[df['Date'].isin(pd.to_datetime(dates))].sort_values('Date')
+        print(f"Filtered dataframe shape: {df_filtered.shape}")
+
+        if df_filtered.empty:
+            print("No data found for the specified dates.")
+            return go.Figure()
+
+        # Get the top 5 columns (excluding 'Date') for each date
+        top_columns = {}
+        for date in df_filtered['Date']:
+            date_df = df_filtered[df_filtered['Date'] == date].drop('Date', axis=1)
+            top_5 = date_df.iloc[0].nlargest(5).index.tolist()
+            top_columns[date] = top_5
+        print(f"Top columns: {top_columns}")
+
+        # Create a unique color for each unique column
+        all_columns = list(set([col for cols in top_columns.values() for col in cols]))
+        colors = [f'rgb{tuple(int(x * 255) for x in colorsys.hsv_to_rgb(i / len(all_columns), 0.8, 0.8))}'
+                  for i in range(len(all_columns))]
+        color_map = dict(zip(all_columns, colors))
+
+        # Prepare data for the alluvial diagram
+        node_labels = []
+        node_colors = []
+        source = []
+        target = []
+        link_colors = []
+
+        for i, date in enumerate(df_filtered['Date']):
+            current_top_5 = top_columns[date]
+            node_labels.extend([f"{col} ({i + 1})" for i, col in enumerate(current_top_5)])
+            node_colors.extend([color_map[col] for col in current_top_5])
+
+            if i < len(df_filtered['Date']) - 1:
+                next_date = df_filtered['Date'].iloc[i + 1]
+                next_top_5 = top_columns[next_date]
+
+                for j, col in enumerate(current_top_5):
+                    if col in next_top_5:
+                        source.append(i * 5 + j)
+                        target.append((i + 1) * 5 + next_top_5.index(col))
+                        link_colors.append(color_map[col])
+
+        print(f"Node labels: {node_labels}")
+        print(f"Source: {source}")
+        print(f"Target: {target}")
+
+        if not source or not target:
+            print("No links found between dates.")
+            return go.Figure()
+
+        # Create the alluvial diagram
+        fig = go.Figure(data=[go.Sankey(
+            node=dict(
+                pad=15,
+                thickness=20,
+                line=dict(color="black", width=0.5),
+                label=node_labels,
+                color=node_colors
+            ),
+            link=dict(
+                source=source,
+                target=target,
+                color=link_colors
+            ))])
+
+        # Update layout
+        date_labels = [date.strftime('%Y-%m-%d') for date in df_filtered['Date']]
+        fig.update_layout(
+            title_text="Alluvial Diagram of Top 5 Columns Over Time",
+            font_size=10,
+            annotations=[
+                dict(
+                    x=x,
+                    y=1.05,
+                    xref="paper",
+                    yref="paper",
+                    text=date,
+                    showarrow=False,
+                ) for x, date in zip([0, 0.5, 1], date_labels)
+            ]
+        )
+
+        return fig
+
+    except Exception as e:
+        print(f"An error occurred: {str(e)}")
+        return go.Figure()
+
+
+def plot_alluvial_diagram(csv_path, dates):
+    # Load the CSV file
+    df = pd.read_csv(csv_path, parse_dates=['Date'])
+
+    # Filter the dataframe to only include the specified dates
+    df_filtered = df[df['Date'].isin(pd.to_datetime(dates))]
+
+    # Prepare the data for the alluvial diagram
+    alluvial_data = []
+    for date in dates:
+        date_data = df_filtered[df_filtered['Date'] == date].iloc[:, 1:].T
+        date_data.columns = ['value']
+        date_data['column'] = date_data.index
+        date_data['date'] = date
+        date_data = date_data.sort_values(by='value', ascending=False).head(5)
+        alluvial_data.append(date_data)
+
+    alluvial_data = pd.concat(alluvial_data)
+
+    # Map columns to categories for visualization
+    alluvial_data['column'] = alluvial_data['column'].astype('category')
+
+    # Define the colors for the top 5 columns
+    colors = ["#FFFFD8", "#D9EDBF", "#8ECAE6", "#003049"]
+
+    # Create a color mapping based on rank
+    color_mapping = {rank: color for rank, color in enumerate(colors)}
+
+    # Plot the alluvial diagram
+    plt.figure(figsize=(15, 8))
+    sns.set(style="whitegrid")
+
+    # Use a scatter plot to simulate the alluvial diagram
+    for i in range(len(dates) - 1):
+        left = alluvial_data[alluvial_data['date'] == dates[i]].reset_index(drop=True)
+        right = alluvial_data[alluvial_data['date'] == dates[i + 1]].reset_index(drop=True)
+
+        for j in range(len(left)):
+            rank = j
+            color = color_mapping.get(rank, "#003049")
+            plt.plot([i, i + 1], [left['column'].cat.codes[j], right['column'].cat.codes[j]], color=color, lw=3)
+            plt.text(i, left['column'].cat.codes[j], left['column'][j], ha='right', va='center')
+            plt.text(i + 1, right['column'].cat.codes[j], right['column'][j], ha='left', va='center')
+
+    plt.xticks(range(len(dates)), dates)
+    plt.xlabel('Date')
+    plt.ylabel('Top 5 Columns')
+    plt.title('Alluvial Diagram of Top 5 Columns Over Time')
+    plt.grid(False)
+    plt.show()
