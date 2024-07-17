@@ -682,19 +682,19 @@ def plot_top_5_columns(csv_path, dates):
         # Sort the values and get the top 5
         top_5 = row.nlargest(5)
 
-        # Create a bar plot for the top 5 values
+        # Create a horizontal bar plot for the top 5 values
         ax = axes[i, 0]
-        top_5.plot(kind='bar', ax=ax)
+        top_5.plot(kind='barh', ax=ax)  # Changed kind to 'barh'
 
         # Customize the plot
         ax.set_title(f'Top 5 Columns on {date.strftime("%Y-%m-%d")}')
-        ax.set_ylabel('Value')
-        ax.set_xlabel('Column')
-        ax.tick_params(axis='x', rotation=45)
+        ax.set_xlabel('Value')  # Adjusted x-axis label
+        ax.set_ylabel('Column')  # Adjusted y-axis label
+        ax.tick_params(axis='y', rotation=0)  # Rotate y-axis labels if needed
 
-        # Add value labels on top of each bar
+        # Add value labels on the right of each bar
         for j, v in enumerate(top_5):
-            ax.text(j, v, f'{v:.2f}', ha='center', va='bottom')
+            ax.text(v, j, f'{v:.2f}', ha='left', va='center')
 
     plt.show()
 
@@ -917,21 +917,12 @@ def plot_alluvial_diagram(data_csv_path, column_dict_path, dates):
     # Load the column dictionary
     column_dict = translate_columns(column_dict_path)
 
-    # Print the column dictionary for debugging
-    print("Column Dictionary:\n", column_dict)
-
     # Load the data CSV
     df = pd.read_csv(data_csv_path, parse_dates=['Date'])
-
-    # Print original columns for debugging
-    print("Original Columns:\n", df.columns)
 
     # Translate column names
     translated_columns = {col: column_dict[col] for col in df.columns if col in column_dict}
     df = df.rename(columns=translated_columns)
-
-    # Print translated columns for debugging
-    print("Translated Columns:\n", df.columns)
 
     # Filter the dataframe to only include the specified dates
     df_filtered = df[df['Date'].isin(pd.to_datetime(dates))]
@@ -966,19 +957,30 @@ def plot_alluvial_diagram(data_csv_path, column_dict_path, dates):
         left = alluvial_data[alluvial_data['date'] == dates[i]].reset_index(drop=True)
         right = alluvial_data[alluvial_data['date'] == dates[i + 1]].reset_index(drop=True)
 
+        # Sort by value to ensure largest number is on top
+        left = left.sort_values(by='value', ascending=False)
+        right = right.sort_values(by='value', ascending=False)
+
         for j in range(len(left)):
             rank = j
             color = color_mapping.get(rank, "#003049")
             plt.plot([i, i + 1], [left['column'].cat.codes[j], right['column'].cat.codes[j]], color=color, lw=3)
-            plt.text(i, left['column'].cat.codes[j], left['column'][j], ha='right', va='center')
-            plt.text(i + 1, right['column'].cat.codes[j], right['column'][j], ha='left', va='center')
+
+    # Create a legend for the colors
+    legend_labels = [f"Rank {rank+1}" for rank in range(len(colors))]
+    plt.legend(legend_labels, loc='upper right')
 
     plt.xticks(range(len(dates)), dates)
     plt.xlabel('Date')
     plt.ylabel('Top 5 Columns')
     plt.title('Alluvial Diagram of Top 5 Columns Over Time')
     plt.grid(False)
+
+    # Remove text on the plot
+    plt.texts = []
+
     plt.show()
+
 
 
 def read_unique_csv(file_path, out):
@@ -1045,3 +1047,224 @@ def plot_alluvial_diagram2(main_csv_path, dict_csv_path, dates):
 
     hv.save(alluvial_plot, 'alluvial_diagram.html', backend='bokeh')
     return alluvial_plot
+
+
+def create_alluvial_diagram_2(csv_path, column_dict_path, dates):
+    # Read the CSV file
+    df = pd.read_csv(csv_path, parse_dates=['Date'])
+
+    # Read the column dictionary
+    column_dict = pd.read_csv(column_dict_path, header=None, index_col=0).iloc[:, 0].to_dict()
+    # Filter the dataframe for the specified dates
+    df_filtered = df[df['Date'].isin(dates)]
+
+    # Get the top 5 columns for each date
+    top_columns = []
+    for date in dates:
+        date_data = df_filtered[df_filtered['Date'] == date].iloc[0]
+        numeric_columns = date_data.drop('Date')
+        numeric_columns = numeric_columns[numeric_columns.apply(lambda x: pd.to_numeric(x, errors='coerce')).notnull()]
+        top_5 = numeric_columns.nlargest(5).index.tolist()
+        top_columns.extend(top_5)
+
+    top_columns = list(set(top_columns))  # Remove duplicates
+
+    # Prepare data for the alluvial diagram
+    node_labels = []
+    source = []
+    target = []
+    value = []
+
+    for i, date in enumerate(dates):
+        date_data = df_filtered[df_filtered['Date'] == date].iloc[0]
+
+        for col in top_columns:
+            node_labels.append(f"{column_dict.get(col, col)} ({date.strftime('%Y-%m-%d')})")
+
+            if i < len(dates) - 1:
+                source.append(len(node_labels) - 1)
+                target.append(len(node_labels) - 1 + len(top_columns))
+                value.append(1)  # Constant width
+
+    # Create the Sankey diagram
+    fig = go.Figure(data=[go.Sankey(
+        node=dict(
+            pad=15,
+            thickness=20,
+            line=dict(color="black", width=0.5),
+            label=node_labels,
+            color="blue"
+        ),
+        link=dict(
+            source=source,
+            target=target,
+            value=value
+        ))])
+
+    fig.update_layout(title_text="Alluvial Diagram of Top 5 Columns Over Time", font_size=10)
+    fig.show()
+
+
+def create_alluvial_diagram_3(data_path, dict_path, dates):
+    # Read the data and dictionary
+    df = pd.read_csv(data_path, parse_dates=['Date'])
+    dict_df = pd.read_csv(dict_path, header=None, index_col=0)
+
+    # Translate column names
+    column_names = {col: dict_df.loc[col, 1] if col in dict_df.index else col for col in df.columns}
+    df.rename(columns=column_names, inplace=True)
+
+    # Filter data for specified dates
+    df_filtered = df[df['Date'].isin(dates)]
+
+    # Identify numeric columns
+    numeric_columns = df_filtered.select_dtypes(include=[np.number]).columns.tolist()
+
+    # Get top 5 columns for each date
+    top_columns = []
+    for date in dates:
+        date_data = df_filtered[df_filtered['Date'] == date].iloc[0]
+        top_5 = date_data[numeric_columns].nlargest(5).index.tolist()
+        top_columns.extend(top_5)
+
+    top_columns = list(set(top_columns))
+
+    # Prepare data for alluvial diagram
+    alluvial_data = []
+    for date in dates:
+        date_data = df_filtered[df_filtered['Date'] == date].iloc[0]
+        sorted_cols = date_data[top_columns].sort_values(ascending=False)
+        for i, (col, value) in enumerate(sorted_cols.items()):
+            alluvial_data.append({'Date': date, 'Column': col, 'Rank': i + 1, 'Value': value})
+
+    alluvial_df = pd.DataFrame(alluvial_data)
+
+    # Create alluvial diagram
+    plt.figure(figsize=(12, 8))
+
+    for col in top_columns:
+        col_data = alluvial_df[alluvial_df['Column'] == col]
+        plt.plot(col_data['Date'], col_data['Rank'], '-o', linewidth=2, markersize=8)
+
+        for i in range(len(col_data) - 1):
+            x1, y1 = col_data.iloc[i]['Date'], col_data.iloc[i]['Rank']
+            x2, y2 = col_data.iloc[i + 1]['Date'], col_data.iloc[i + 1]['Rank']
+            plt.fill_between([x1, x2], [y1, y2], [y1 + 0.8, y2 + 0.8], alpha=0.3)
+
+    plt.gca().invert_yaxis()
+    plt.ylabel('Rank')
+    plt.title('Alluvial Diagram of Top 5 Columns')
+    plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
+    plt.gcf().autofmt_xdate()  # Rotation
+
+    for i, date in enumerate(dates):
+        date_data = alluvial_df[alluvial_df['Date'] == date]
+        for _, row in date_data.iterrows():
+            plt.text(row['Date'], row['Rank'], row['Column'], ha='right' if i == 0 else 'left', va='center')
+
+    plt.tight_layout()
+    plt.show()
+
+# Define your dictionary mapping codes to descriptions
+code_to_description = {
+    '00': 'Інше (для фізичних осіб (у т. ч. суб`єктів незалежної професійної діяльності) та нерезидентів)',
+    '01': 'Сільське господарство, мисливство та надання пов\'язаних із ними послуг',
+    '02': 'Лісове господарство та лісозаготівлі',
+    '03': 'Рибне господарство',
+    '05': 'Добування кам\'яного та бурого вугілля',
+    '06': 'Добування сирої нафти та природного газу',
+    '07': 'Добування металевих руд',
+    '08': 'Добування інших корисних копалин та розроблення кар\'єрів',
+    '09': 'Надання допоміжних послуг у сфері добувної промисловості та розроблення кар\'єрів',
+    '10': 'Виробництво харчових продуктів',
+    '11': 'Виробництво напоїв',
+    '12': 'Виробництво тютюнових виробів',
+    '13': 'Текстильне виробництво',
+    '14': 'Виробництво одягу',
+    '15': 'Виробництво шкіри, виробів зі шкіри та інших матеріалів',
+    '16': 'Оброблення деревини та виготовлення виробів з деревини та корка, крім меблів; виготовлення виробів із соломки та рослинних матеріалів для плетіння',
+    '17': 'Виробництво паперу та паперових виробів',
+    '18': 'Поліграфічна діяльність, тиражування записаної інформації',
+    '19': 'Виробництво коксу та продуктів нафтоперероблення',
+    '20': 'Виробництво хімічних речовин і хімічної продукції',
+    '21': 'Виробництво основних фармацевтичних продуктів і фармацевтичних препаратів',
+    '22': 'Виробництво гумових і пластмасових виробів',
+    '23': 'Виробництво іншої неметалевої мінеральної продукції',
+    '24': 'Металургійне виробництво',
+    '25': 'Виробництво готових металевих виробів, крім машин і устатковання',
+    '26': 'Виробництво комп\'ютерів, електронної та оптичної продукції',
+    '27': 'Виробництво електричного устатковання',
+    '28': 'Виробництво машин і устатковання, н.в.і.у.',
+    '29': 'Виробництво автотранспортних засобів, причепів і напівпричепів',
+    '30': 'Виробництво інших транспортних засобів',
+    '31': 'Виробництво меблів',
+    '32': 'Виробництво іншої продукції',
+    '33': 'Ремонт і монтаж машин і устатковання',
+    '35': 'Постачання електроенергії, газу, пари та кондиційованого повітря',
+    '36': 'Забір, очищення та постачання води',
+    '37': 'Каналізація, відведення й очищення стічних вод',
+    '38': 'Збирання, оброблення й видалення відходів; відновлення матеріалів',
+    '39': 'Інша діяльність щодо поводження з відходами',
+    '41': 'Будівництво будівель',
+    '42': 'Будівництво споруд',
+    '43': 'Спеціалізовані будівельні роботи',
+    '45': 'Оптова та роздрібна торгівля автотранспортними засобами та мотоциклами, їх ремонт',
+    '46': 'Оптова торгівля, крім торгівлі автотранспортними засобами та мотоциклами',
+    '47': 'Роздрібна торгівля, крім торгівлі автотранспортними засобами та мотоциклами',
+    '49': 'Наземний і трубопровідний транспорт',
+    '50': 'Водний транспорт',
+    '51': 'Авіаційний транспорт',
+    '52': 'Складське господарство та допоміжна діяльність у сфері транспорту',
+    '53': 'Поштова та кур\'єрська діяльність',
+    '55': 'Тимчасове розміщування',
+    '56': 'Діяльність із забезпечення стравами та напоями',
+    '58': 'Видавнича діяльність',
+    '59': 'Виробництво кіно- та відеофільмів, телевізійних програм, видання звукозаписів',
+    '60': 'Діяльність у сфері радіомовлення та телевізійного мовлення',
+    '61': 'Телекомунікації (електрозв\'язок)',
+    '62': 'Комп\'ютерне програмування, консультування та пов\'язана з ними діяльність',
+    '63': 'Надання інформаційних послуг',
+    '64': "Надання фінансових послуг, крім страхування та пенсійного забезпечення",
+    '65': "Страхування, перестрахування та недержавне пенсійне забезпечення, крім обов'язкового соціального страхування",
+    '66': "Допоміжна діяльність у сферах фінансових послуг і страхування",
+    '68': "Операції з нерухомим майном",
+    '69': "Діяльність у сферах права та бухгалтерського обліку",
+    '70': "Діяльність головних управлінь (хед-офісів); консультування з питань керування",
+    '71': "Діяльність у сферах архітектури та інжинірингу; технічні випробування та дослідження",
+    '72': "Наукові дослідження та розробки",
+    '73': "Рекламна діяльність і дослідження кон'юнктури ринку",
+    '74': "Інша професійна, наукова та технічна діяльність",
+    '75': "Ветеринарна діяльність",
+    '77': "Оренда, прокат і лізинг",
+    '78': "Діяльність із працевлаштування",
+    '79': "Діяльність туристичних агентств, туристичних операторів, надання інших послуг із бронювання та пов'язана з цим діяльність",
+    '80': "Діяльність охоронних служб та проведення розслідувань",
+    '81': "Обслуговування будинків і територій",
+    '82': "Адміністративна та допоміжна офісна діяльність, інші допоміжні комерційні послуги",
+    '84': "Державне управління й оборона; обов'язкове соціальне страхування",
+    '85': "Освіта",
+    '86': "Охорона здоров'я",
+    '87': "Надання послуг догляду із забезпеченням проживання",
+    '88': "Надання соціальної допомоги без забезпечення проживання",
+    '90': "Діяльність у сфері творчості, мистецтва та розваг",
+    '91': "Функціювання бібліотек, архівів, музеїв та інших закладів культури",
+    '92': "Організування азартних ігор",
+    '93': "Діяльність у сфері спорту, організування відпочинку та розваг",
+    '94': "Діяльність громадських організацій",
+    '95': "Ремонт комп'ютерів, побутових виробів і предметів особистого вжитку",
+    '96': "Надання інших індивідуальних послуг",
+    '97': "Діяльність домашніх господарств як роботодавців для домашньої прислуги"
+}
+
+def rename_columns_in_csv(input_file, output_file):
+    # Read the CSV file
+    if input_file not in ['data/loans/grouped/loans/.csv', 'data/loans/grouped/loans/nan.csv']:
+        df = pd.read_csv(input_file)
+
+    # Rename columns using the dictionary
+        new_columns = [code_to_description.get(col.strip(), col.strip()) for col in df.columns]
+        df.columns = new_columns
+
+    # Save the updated CSV file
+        df.to_csv(output_file, index=False)
+
