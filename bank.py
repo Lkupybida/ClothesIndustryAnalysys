@@ -58,10 +58,7 @@ def remove_rolling_sum(file_path, out_path):
             df_diff.loc[idx] = df.loc[idx]
     df_diff.to_csv(out_path)
 
-<<<<<<< HEAD
-remove_rolling_sum('data/original/profit.csv', 'data/differenced/profit.csv')
-=======
-# remove_rolling_sum('data/original/private_profit.csv', 'data/differenced/private_profit.csv')
->>>>>>> b9a6192dc459ed486900b88fb2da237b97c53e10
 
-aggregate_data('IGLB refinanced by NBU', 'private_iglb.csv', 0) 
+# remove_rolling_sum('data/original/private_profit.csv', 'data/differenced/private_profit.csv')
+
+aggregate_data('Profit (loss) before tax', 'private_profit_before_tax.csv', 3)
