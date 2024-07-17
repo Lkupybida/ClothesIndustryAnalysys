@@ -5,6 +5,10 @@ from datetime import datetime
 from pandas.tseries.offsets import DateOffset
 import openpyxl
 import geopandas as gpd
+from matplotlib.colors import ListedColormap
+from matplotlib.colors import LinearSegmentedColormap, LogNorm
+from matplotlib.font_manager import FontProperties
+from matplotlib.patheffects import withStroke
 
 def extract_bank_data(root_folder, sheet_name, column, file):
     target_banks = ["privatbank", "oschadbank", "ukreximbank", "ukrgasbank", "alfa", "sense", "first investment bank"]
@@ -467,9 +471,12 @@ def group_banks_wrapper():
 def read_bank_filials(csv_file):
     # Read the CSV data
     data = pd.read_csv(csv_file, header=None)
+    return data
 
 
-def plot_bank_filials(data):
+def plot_bank_filials(bank):
+    data = csv_for_geomapping('data/loans/regions.csv', bank)
+
     # Assuming the first row contains region names and the second row contains counts
     regions = data.iloc[0].tolist()
     counts = data.iloc[1].tolist()
@@ -485,7 +492,7 @@ def plot_bank_filials(data):
         'Донецька': "Donets'k",
         'Житомирська': 'Zhytomyr',
         'Закарпатська': 'Zakarpattia',
-        'Запоріжська': 'Zaporizhia',
+        'Запорізька': 'Zaporizhia',
         'ІваноФранківська': "Ivano-Frankivs'k",
         'Київ': 'Kiev City',
         'Київська': 'Kiev',
@@ -521,17 +528,58 @@ def plot_bank_filials(data):
 
     # Create the plot
     fig, ax = plt.subplots(1, 1, figsize=(15, 10))
+    # colors = ["#cead5f", "#8ECAE6", "#003049"]
+    # colors = ["#D9EDBF", "#8ECAE6", "#003049"]
+    colors = ["#FFFFD8", "#D9EDBF", "#8ECAE6", "#003049"]
+    # colors = ["#FFFFD8", "#E1F3BF", "#B0DEB7", "#68C3BE", "#319DC1", "#236DAC", "#233B93", "#081B5D"]
+    # colors = ["#FFFFD8", "#E1F3BF", "#B0DEB7", "#8ECAE6", "#219ebc", "#003049"]
+    # White to #209AB7
+    n_bins = 10000  # Discretizes the interpolation into bins
 
-    # Plot the map
-    ukraine.plot(column='count', ax=ax, legend=True,
-                 cmap='Blues', missing_kwds={'color': 'lightgrey'},
-                 legend_kwds={'label': 'Number of Bank Filials'})
+    # Define custom colormap
+    custom_cmap = LinearSegmentedColormap.from_list('custom_palette', colors, N=n_bins)
 
-    # Remove axis
+    # Plot the map with logarithmic scale
+    norm = LogNorm(vmin=1, vmax=ukraine['count'].max())
+
+    # Plot regions with count > 0
+    ukraine[ukraine['count'] > 0].plot(column='count', ax=ax, legend=True,
+                                       cmap=custom_cmap, norm=norm,
+                                       legend_kwds={'label': 'Кількість підрозділів по регіонах'})
+
+    # Handle regions with count == 0 by setting them to light gray
+    ukraine[ukraine['count'] == 0].plot(ax=ax, color='lightgrey', hatch='///')
+
+    # Annotate each region with count value
+    for idx, row in ukraine.iterrows():
+        if row['count'] > 0:
+            count_text = int(row['count'])  # Convert to integer
+            text = str(count_text)
+
+            # Lower the annotation for Kyivska oblast
+            if row['region'] == 'Київська':
+                ax.annotate(text, xy=(30.475674464445525, 50.29705971712133 - 0.2), color='white',
+                            fontsize=14, ha='center', va='center', weight='bold',
+                            path_effects=[withStroke(linewidth=1, foreground='black')])
+            elif row['region'] == 'Одеська':
+                ax.annotate(text, xy=(29.86530477280775 + 0.6, 46.744568162881855), color='white',
+                            fontsize=14, ha='center', va='center', weight='bold',
+                            path_effects=[withStroke(linewidth=1, foreground='black')])
+            elif row['region'] == 'Київ':
+                ax.annotate(text, xy=(30.522137666278727, 50.45778762272526 + 0.15), color='white',
+                            fontsize=14, ha='center', va='center', weight='bold',
+                            path_effects=[withStroke(linewidth=1, foreground='black')])
+            else:
+                ax.annotate(text, xy=row['geometry'].centroid.coords[0], color='white',
+                            fontsize=14, ha='center', va='center', weight='bold',
+                            path_effects=[withStroke(linewidth=1, foreground='black')])
+
+    # Remove axis and grid
     ax.axis('off')
+    ax.grid(False)
 
     # Add a title
-    plt.title('Bank Filials in Ukraine by Region', fontsize=16)
+    plt.title('Кількість підрозділів ' + bank + 'у по регіонах (логарифмічний масштаб)', fontsize=16)
 
     # Show the plot
     plt.show()
@@ -540,13 +588,62 @@ def extract_filials():
     df = pd.read_excel('original_dataset/Kil_pidr_2024-07-01.xlsx', header=6, sheet_name='Діючі підрозділи_на 01.07.24')
     new_df = pd.DataFrame()
     bank_col = find_target_column(df, 'Назва банку')
-    print(df.columns)
     if bank_col:
         new_df['bank'] = df[bank_col]
     regions = ['Вінніцька','Волинська','Дніпропетровська','Донецька','Житомирська','Закарпатська','Запоріжська','ІваноФранківська','Київ','Київська','Кіровоградська','Луганська','Львівська','Миколаївська','Одеська','Полтавська','Рівненська','Сумська','Тернопільська','Харківська','Херсонська','Хмельницька','Черкаська','Чернігівська','Чернівецька','АРК']
-    print(len(regions))
-    for r in range(5, 31):
-        region = df.columns[r]
-        new_df[region] = df[regions]
+    for r in regions:
+        new_df[r] = df[r]
 
     new_df.to_csv('data/loans/regions.csv', index=False)
+
+
+def process_csv_for_geomapping(file_path, entry):
+    # Read the CSV file
+    df = pd.read_csv(file_path)
+
+    # Check if the entry is in the first column
+    if entry not in df.iloc[:, 0].values:
+        raise ValueError(f"Entry '{entry}' not found in the first column")
+
+    # Find the row that matches the entry in the first column
+    matched_row = df[df.iloc[:, 0] == entry].iloc[0]
+
+    # Drop the first column
+    df = df.drop(df.columns[0], axis=1)
+
+    # Create a new DataFrame with the same column names
+    new_df = pd.DataFrame(columns=df.columns)
+
+    # Set the second row of the new DataFrame to the matched row
+    new_df.loc[1] = matched_row[1:]
+
+    return new_df
+
+
+def csv_for_geomapping(csv_file, bank_name):
+    # Read the CSV file into a DataFrame
+    df = pd.read_csv(csv_file)
+
+    # Extract the row for the given bank
+    bank_row = df[df['bank'] == bank_name]
+
+    # Extract the column names (regions)
+    columns = df.columns.tolist()[1:]  # Exclude the 'bank' column
+
+    # Extract the values for the selected bank
+    values = bank_row.values[0][1:].tolist()  # Exclude the 'bank' column
+
+    # Create the new DataFrame in the desired format
+    new_df = pd.DataFrame([columns, values])
+
+    # Reset the index to have the desired format
+    new_df.index = [0, 1]
+    new_df.columns = list(range(len(columns)))
+
+    return new_df
+
+def read_shp(file_path):
+    gdf = gpd.read_file(file_path)
+
+    # Print the columns
+    print(gdf.head())
