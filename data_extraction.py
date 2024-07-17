@@ -18,6 +18,7 @@ from matplotlib.sankey import Sankey
 import holoviews as hv
 import hvplot.pandas
 from holoviews import opts
+from matplotlib.ticker import FuncFormatter
 
 hv.extension('bokeh')
 
@@ -539,12 +540,7 @@ def plot_bank_filials(bank):
 
     # Create the plot
     fig, ax = plt.subplots(1, 1, figsize=(15, 10))
-    # colors = ["#cead5f", "#8ECAE6", "#003049"]
-    # colors = ["#D9EDBF", "#8ECAE6", "#003049"]
     colors = ["#FFFFD8", "#D9EDBF", "#8ECAE6", "#003049"]
-    # colors = ["#FFFFD8", "#E1F3BF", "#B0DEB7", "#68C3BE", "#319DC1", "#236DAC", "#233B93", "#081B5D"]
-    # colors = ["#FFFFD8", "#E1F3BF", "#B0DEB7", "#8ECAE6", "#219ebc", "#003049"]
-    # White to #209AB7
     n_bins = 10000  # Discretizes the interpolation into bins
 
     # Define custom colormap
@@ -554,9 +550,8 @@ def plot_bank_filials(bank):
     norm = LogNorm(vmin=1, vmax=ukraine['count'].max())
 
     # Plot regions with count > 0
-    ukraine[ukraine['count'] > 0].plot(column='count', ax=ax, legend=True,
-                                       cmap=custom_cmap, norm=norm,
-                                       legend_kwds={'label': 'Кількість підрозділів по регіонах'})
+    regions_plot = ukraine[ukraine['count'] > 0].plot(column='count', ax=ax, legend=False,
+                                                      cmap=custom_cmap, norm=norm)
 
     # Handle regions with count == 0 by setting them to light gray
     ukraine[ukraine['count'] == 0].plot(ax=ax, color='lightgrey', hatch='///')
@@ -584,6 +579,16 @@ def plot_bank_filials(bank):
                 ax.annotate(text, xy=row['geometry'].centroid.coords[0], color='white',
                             fontsize=14, ha='center', va='center', weight='bold',
                             path_effects=[withStroke(linewidth=1, foreground='black')])
+
+    # Custom formatting function for the colorbar
+    def format_ticks(value, tick_number):
+        return f'{int(value):,}'  # Format as an integer with thousands separator
+
+    # Update the colorbar with custom formatter
+    sm = plt.cm.ScalarMappable(cmap=custom_cmap, norm=norm)
+    sm._A = []  # This is a workaround for a known bug in matplotlib
+    cbar = fig.colorbar(sm, ax=ax)
+    cbar.ax.yaxis.set_major_formatter(FuncFormatter(format_ticks))
 
     # Remove axis and grid
     ax.axis('off')
