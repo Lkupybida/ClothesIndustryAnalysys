@@ -18,3 +18,4 @@ if __name__=="__main__":
 
     #plot_bank_filials('original_dataset/filials_oschad.csv')
     #extract_filials()
+    read_unique_csv('original_dataset/Loans_KVED_2024-06-01 - Sheet1.csv', 'original_dataset/Loans_KVED_2024-06-01 - Sheet2.csv')

@@ -14,6 +14,12 @@ from plotly.subplots import make_subplots
 from typing import List, Tuple
 import colorsys
 import seaborn as sns
+from matplotlib.sankey import Sankey
+import holoviews as hv
+import hvplot.pandas
+from holoviews import opts
+
+hv.extension('bokeh')
 
 def extract_bank_data(root_folder, sheet_name, column, file):
     target_banks = ["privatbank", "oschadbank", "ukreximbank", "ukrgasbank", "alfa", "sense", "first investment bank"]
@@ -900,9 +906,32 @@ def create_alluvial_diagram(csv_path: str, dates: List[str]) -> go.Figure:
         return go.Figure()
 
 
-def plot_alluvial_diagram(csv_path, dates):
-    # Load the CSV file
-    df = pd.read_csv(csv_path, parse_dates=['Date'])
+def translate_columns(column_dict_path):
+    # Load the dictionary CSV
+    column_dict = pd.read_csv(column_dict_path, header=None, index_col=0)
+    column_dict = column_dict.squeeze("columns").to_dict()
+    return column_dict
+
+
+def plot_alluvial_diagram(data_csv_path, column_dict_path, dates):
+    # Load the column dictionary
+    column_dict = translate_columns(column_dict_path)
+
+    # Print the column dictionary for debugging
+    print("Column Dictionary:\n", column_dict)
+
+    # Load the data CSV
+    df = pd.read_csv(data_csv_path, parse_dates=['Date'])
+
+    # Print original columns for debugging
+    print("Original Columns:\n", df.columns)
+
+    # Translate column names
+    translated_columns = {col: column_dict[col] for col in df.columns if col in column_dict}
+    df = df.rename(columns=translated_columns)
+
+    # Print translated columns for debugging
+    print("Translated Columns:\n", df.columns)
 
     # Filter the dataframe to only include the specified dates
     df_filtered = df[df['Date'].isin(pd.to_datetime(dates))]
@@ -950,3 +979,69 @@ def plot_alluvial_diagram(csv_path, dates):
     plt.title('Alluvial Diagram of Top 5 Columns Over Time')
     plt.grid(False)
     plt.show()
+
+
+def read_unique_csv(file_path, out):
+    # Read the CSV file
+    df = pd.read_csv(file_path, header=None)
+
+    # Drop duplicate rows
+    df_unique = df.drop_duplicates()
+
+    # Convert the DataFrame back to a list of lists
+    unique_rows = df_unique.values.tolist()
+
+    df_unique.to_csv(out, index=False, header=False)
+
+
+def plot_alluvial_diagram2(main_csv_path, dict_csv_path, dates):
+    # Read the main data CSV file
+    main_df = pd.read_csv(main_csv_path, parse_dates=['Date'])
+
+    # Filter data for the specified dates
+    filtered_df = main_df[main_df['Date'].isin(pd.to_datetime(dates))]
+
+    # Read the dictionary CSV file
+    dict_df = pd.read_csv(dict_csv_path, header=None, index_col=0)
+    dict_map = dict_df[1].to_dict()
+
+    # Translate column names
+    translated_columns = ['Date'] + [dict_map.get(col, col) for col in main_df.columns[1:]]
+    filtered_df.columns = translated_columns
+
+    # Extract the top 5 columns for each date
+    top_columns_per_date = {}
+    for date in dates:
+        date_data = filtered_df[filtered_df['Date'] == date].drop(columns='Date').squeeze()
+        top_columns = date_data.nlargest(5).index.tolist()
+        top_columns_per_date[date] = top_columns
+
+    # Prepare data for the alluvial diagram
+    alluvial_data = []
+    for i in range(len(dates) - 1):
+        start_date = dates[i]
+        end_date = dates[i + 1]
+
+        start_top = top_columns_per_date[start_date]
+        end_top = top_columns_per_date[end_date]
+
+        for start_col in start_top:
+            if start_col in end_top:
+                alluvial_data.append((start_date, start_col, end_date, start_col, 1))
+            else:
+                for end_col in end_top:
+                    alluvial_data.append((start_date, start_col, end_date, end_col, 0.2))
+
+    alluvial_df = pd.DataFrame(alluvial_data, columns=['StartDate', 'StartCategory', 'EndDate', 'EndCategory', 'Value'])
+
+    # Plot the alluvial diagram
+    alluvial_plot = alluvial_df.hvplot.sankey(
+        'StartCategory', 'EndCategory', 'Value', color='StartCategory',
+        labels='Value', title='Alluvial Diagram'
+    ).opts(
+        opts.Sankey(width=800, height=600, edge_color='StartCategory', node_color='StartCategory',
+                    label_position='outer')
+    )
+
+    hv.save(alluvial_plot, 'alluvial_diagram.html', backend='bokeh')
+    return alluvial_plot
