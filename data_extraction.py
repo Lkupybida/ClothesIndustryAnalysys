@@ -582,13 +582,26 @@ def plot_bank_filials(bank):
 
     # Custom formatting function for the colorbar
     def format_ticks(value, tick_number):
-        return f'{int(value):,}'  # Format as an integer with thousands separator
+        if value == 0:
+            return '0'
+        elif value < 1:
+            return f'{value:.2f}'
+        elif value == 2:
+            return 'чайник'
+        elif value == 3:
+            return '3'
+        elif value == 4:
+            return '4'
+        elif value == 5:
+            return '5'
+        else:
+            return f'{int(value)}'
 
     # Update the colorbar with custom formatter
     sm = plt.cm.ScalarMappable(cmap=custom_cmap, norm=norm)
     sm._A = []  # This is a workaround for a known bug in matplotlib
-    cbar = fig.colorbar(sm, ax=ax)
-    cbar.ax.yaxis.set_major_formatter(FuncFormatter(format_ticks))
+    print(sm)
+    cbar = fig.colorbar(sm, ax=ax, format=FuncFormatter(format_ticks))
 
     # Remove axis and grid
     ax.axis('off')
