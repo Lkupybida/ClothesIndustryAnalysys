@@ -1,7 +1,7 @@
 import seaborn as sns
 import pandas as pd
 import matplotlib.pyplot as plt
-from matplotlib.colors import LinearSegmentedColormap
+from matplotlib.colors import LinearSegmentedColormap, Normalize
 from matplotlib.patheffects import withStroke
 from textwrap import wrap
 import matplotlib.lines as mlines
@@ -68,20 +68,20 @@ def create_log_colormap(colors, N=10000):
     return LinearSegmentedColormap('log_cmap', segmentdata=cdict, N=N)
 
 def create_bump_chart(bank, bank_ukr, dates):
-    data_path = 'data/loans/kved_named/loans/' + bank + '.csv'
-    df = pd.read_csv(data_path, parse_dates=['Date'])
+    data_path = 'data/loans/kved_yearly/loans/' + bank + '.csv'
+    df = pd.read_csv(data_path, parse_dates=['date'])
 
     # Filter the dataframe for the specified dates
-    df_filtered = df[df['Date'].isin(dates)]
+    df_filtered = df[df['date'].isin(dates)]
 
     # Melt the dataframe to long format
-    df_melted = df_filtered.melt(id_vars=['Date'], var_name='Column', value_name='Value')
+    df_melted = df_filtered.melt(id_vars=['date'], var_name='Column', value_name='Value')
 
     # Remove rows with NaN values
     df_melted = df_melted.dropna()
 
     # Get the top 5 columns for each date
-    top_5_columns = df_melted.groupby('Date').apply(lambda x: x.nlargest(5, 'Value')['Column'].tolist())
+    top_5_columns = df_melted.groupby('date').apply(lambda x: x.nlargest(5, 'Value')['Column'].tolist())
 
     # Create a set of all unique top 5 columns
     all_top_columns = set([col for cols in top_5_columns for col in cols])
@@ -90,17 +90,17 @@ def create_bump_chart(bank, bank_ukr, dates):
     df_top = df_melted[df_melted['Column'].isin(all_top_columns)]
 
     # Calculate the rank for each column within each date
-    df_top['Rank'] = df_top.groupby('Date')['Value'].rank(method='first', ascending=False)
+    df_top['Rank'] = df_top.groupby('date')['Value'].rank(method='first', ascending=False)
 
     # Create a pivot table with all dates and columns
-    df_pivot = df_top.pivot(index='Date', columns='Column', values='Rank')
+    df_pivot = df_top.pivot(index='date', columns='Column', values='Rank')
 
     # Fill NaN values with a rank higher than the maximum
     max_rank = df_top['Rank'].max()
     df_pivot = df_pivot.fillna(max_rank + 1)
 
     # Get the last period's values for color mapping
-    last_period_values = df_top[df_top['Date'] == df_top['Date'].max()].set_index('Column')['Value']
+    last_period_values = df_top[df_top['date'] == df_top['date'].max()].set_index('Column')['Value']
 
     # Create the custom color map
     colors = ['#cead5f', "#FFFFD8", "#b9e67f", '#9ec56b', "#8ECAE6", "#219ebc", "#003049"]
@@ -114,15 +114,15 @@ def create_bump_chart(bank, bank_ukr, dates):
     norm = plt.Normalize(last_period_values.min(), last_period_values.max())
 
     # Melt the pivot table back to long format
-    df_plot = df_pivot.reset_index().melt(id_vars=['Date'], var_name='Column', value_name='Rank')
+    df_plot = df_pivot.reset_index().melt(id_vars=['date'], var_name='Column', value_name='Rank')
 
     for column in df_pivot.columns:
         data = df_plot[df_plot['Column'] == column]
         color = custom_cmap(norm(last_period_values.get(column, last_period_values.min())))
-        plt.plot(data['Date'], data['Rank'], linewidth=30, label=column, color=color)
+        plt.plot(data['date'], data['Rank'], linewidth=30, label=column, color=color)
 
         # Add values on the plot
-        for x, y, value in zip(data['Date'], data['Rank'], df_top[df_top['Column'] == column]['Value']):
+        for x, y, value in zip(data['date'], data['Rank'], df_top[df_top['Column'] == column]['Value']):
             if y <= max_rank:  # Only add label if the point is in the top 5
                 plt.text(x, y, f'{round(value/1000000, 1)}', ha='right', va='bottom', fontsize=15, color='black',
                          path_effects=[withStroke(linewidth=2, foreground='white')])
@@ -153,3 +153,103 @@ def create_bump_chart(bank, bank_ukr, dates):
     plt.grid(False)
     # Show the plot
     plt.show()
+
+def create_log_colormap_2(colors):
+    segments = [(i / (len(colors) - 1), colors[i]) for i in range(len(colors))]
+    return LinearSegmentedColormap.from_list("custom_colormap", segments)
+
+
+def create_bump_chart_2(bank, bank_ukr, dates, color_list=None):
+    data_path = 'data/loans/kved_yearly/loans/' + bank + '.csv'
+    df = pd.read_csv(data_path, parse_dates=['date'])
+
+    # Filter the dataframe for the specified dates
+    df_filtered = df[df['date'].isin(dates)]
+
+    # Melt the dataframe to long format
+    df_melted = df_filtered.melt(id_vars=['date'], var_name='Column', value_name='Value')
+
+    # Remove rows with NaN values
+    df_melted = df_melted.dropna()
+
+    # Get the top 5 columns for each date
+    top_5_columns = df_melted.groupby('date').apply(lambda x: x.nlargest(5, 'Value')['Column'].tolist())
+
+    # Create a set of all unique top 5 columns
+    all_top_columns = set([col for cols in top_5_columns for col in cols])
+
+    # Filter the melted dataframe to include only the top columns
+    df_top = df_melted[df_melted['Column'].isin(all_top_columns)]
+
+    # Calculate the rank for each column within each date
+    df_top['Rank'] = df_top.groupby('date')['Value'].rank(method='first', ascending=False)
+
+    # Create a pivot table with all dates and columns
+    df_pivot = df_top.pivot(index='date', columns='Column', values='Rank')
+
+    # Fill NaN values with a rank higher than the maximum
+    max_rank = df_top['Rank'].max()
+    df_pivot = df_pivot.fillna(max_rank + 1)
+
+    # Get the last period's values for color mapping
+    last_period_values = df_top[df_top['date'] == df_top['date'].max()].set_index('Column')['Value']
+
+    # Default colors if color_list is not provided
+    if color_list is None:
+        default_colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f',
+                          '#bcbd22', '#17becf']
+    else:
+        # Map colors according to last period's values
+        color_mapping = {}
+        sorted_last_period = last_period_values.sort_values(ascending=False).index
+        num_colors = len(color_list)
+        for i, col in enumerate(sorted_last_period):
+            color_mapping[col] = color_list[i % num_colors]
+
+        # Apply colors based on the mapping
+        default_colors = [color_mapping[col] for col in df_pivot.columns]
+
+    # Create the bump chart
+    plt.figure(figsize=(14, 10))
+
+    # Melt the pivot table back to long format
+    df_plot = df_pivot.reset_index().melt(id_vars=['date'], var_name='Column', value_name='Rank')
+
+    for idx, column in enumerate(df_pivot.columns):
+        data = df_plot[df_plot['Column'] == column]
+        color = default_colors[idx % len(default_colors)]  # Cycle through colors
+        plt.plot(data['date'], data['Rank'], linewidth=30, label=column, color=color)
+
+        # Add values on the plot
+        for x, y, value in zip(data['date'], data['Rank'], df_top[df_top['Column'] == column]['Value']):
+            if y <= max_rank:  # Only add label if the point is in the top 5
+                plt.text(x, y, f'{round(value / 1000000, 1)}', ha='right', va='bottom', fontsize=15, color='black',
+                         path_effects=[withStroke(linewidth=2, foreground='white')])
+
+    # Customize the plot
+    plt.gca().invert_yaxis()  # Invert y-axis to have rank 1 at the top
+    plt.title('Топ 5 видів діяльності під які ' + bank_ukr + ' видає кредити', fontsize=16)
+    plt.xlabel('Date', fontsize=12)
+    plt.ylabel('Rank', fontsize=12)
+
+    # Modify legend to allow text wrapping with smaller linewidth
+    handles, labels = plt.gca().get_legend_handles_labels()
+    custom_handles = [mlines.Line2D([], [], color=handle.get_color(), linewidth=5) for handle in handles]
+    plt.legend(custom_handles, ['\n'.join(wrap(l, 40)) for l in labels],
+               title='КВЕД\n(число позначає обсяг кредитів у млрд грн)', bbox_to_anchor=(1.05, 1), loc='upper left')
+
+    # Set y-axis limits
+    plt.ylim(max_rank + 1.5, 0.5)
+
+    # Remove x-axis labels and ticks
+    plt.xticks(dates, dates, rotation=45, ha='right')
+
+    # Adjust layout to prevent cropping of wrapped legend text
+    plt.tight_layout()
+    plt.subplots_adjust(right=0.7)  # Adjust this value as needed
+    plt.grid(visible=False)
+    plt.axis('off')
+    plt.grid(False)
+    # Show the plot
+    plt.show()
+

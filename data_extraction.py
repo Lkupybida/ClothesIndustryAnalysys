@@ -2,6 +2,8 @@ import os
 import pandas as pd
 import numpy as np
 from datetime import datetime
+
+from matplotlib.ticker import FuncFormatter
 from pandas.tseries.offsets import DateOffset
 import openpyxl
 import geopandas as gpd
@@ -15,10 +17,10 @@ from typing import List, Tuple
 import colorsys
 import seaborn as sns
 from matplotlib.sankey import Sankey
-# import holoviews as hv
-# import hvplot.pandas
-# from holoviews import opts
-# from matplotlib.ticker import FuncFormatter
+import holoviews as hv
+import hvplot.pandas
+from holoviews import opts
+from matplotlib.ticker import FuncFormatter
 
 #hv.extension('bokeh')
 
@@ -1123,65 +1125,65 @@ def create_alluvial_diagram_2(csv_path, column_dict_path, dates):
     fig.show()
 
 
-def create_alluvial_diagram_3(data_path, dict_path, dates):
-    # Read the data and dictionary
-    df = pd.read_csv(data_path, parse_dates=['Date'])
-    dict_df = pd.read_csv(dict_path, header=None, index_col=0)
-
-    # Translate column names
-    column_names = {col: dict_df.loc[col, 1] if col in dict_df.index else col for col in df.columns}
-    df.rename(columns=column_names, inplace=True)
-
-    # Filter data for specified dates
-    df_filtered = df[df['Date'].isin(dates)]
-
-    # Identify numeric columns
-    numeric_columns = df_filtered.select_dtypes(include=[np.number]).columns.tolist()
-
-    # Get top 5 columns for each date
-    top_columns = []
-    for date in dates:
-        date_data = df_filtered[df_filtered['Date'] == date].iloc[0]
-        top_5 = date_data[numeric_columns].nlargest(5).index.tolist()
-        top_columns.extend(top_5)
-
-    top_columns = list(set(top_columns))
-
-    # Prepare data for alluvial diagram
-    alluvial_data = []
-    for date in dates:
-        date_data = df_filtered[df_filtered['Date'] == date].iloc[0]
-        sorted_cols = date_data[top_columns].sort_values(ascending=False)
-        for i, (col, value) in enumerate(sorted_cols.items()):
-            alluvial_data.append({'Date': date, 'Column': col, 'Rank': i + 1, 'Value': value})
-
-    alluvial_df = pd.DataFrame(alluvial_data)
-
-    # Create alluvial diagram
-    plt.figure(figsize=(12, 8))
-
-    for col in top_columns:
-        col_data = alluvial_df[alluvial_df['Column'] == col]
-        plt.plot(col_data['Date'], col_data['Rank'], '-o', linewidth=2, markersize=8)
-
-        for i in range(len(col_data) - 1):
-            x1, y1 = col_data.iloc[i]['Date'], col_data.iloc[i]['Rank']
-            x2, y2 = col_data.iloc[i + 1]['Date'], col_data.iloc[i + 1]['Rank']
-            plt.fill_between([x1, x2], [y1, y2], [y1 + 0.8, y2 + 0.8], alpha=0.3)
-
-    plt.gca().invert_yaxis()
-    plt.ylabel('Rank')
-    plt.title('Alluvial Diagram of Top 5 Columns')
-    plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
-    plt.gcf().autofmt_xdate()  # Rotation
-
-    for i, date in enumerate(dates):
-        date_data = alluvial_df[alluvial_df['Date'] == date]
-        for _, row in date_data.iterrows():
-            plt.text(row['Date'], row['Rank'], row['Column'], ha='right' if i == 0 else 'left', va='center')
-
-    plt.tight_layout()
-    plt.show()
+# def create_alluvial_diagram_3(data_path, dict_path, dates):
+#     # Read the data and dictionary
+#     df = pd.read_csv(data_path, parse_dates=['Date'])
+#     dict_df = pd.read_csv(dict_path, header=None, index_col=0)
+#
+#     # Translate column names
+#     column_names = {col: dict_df.loc[col, 1] if col in dict_df.index else col for col in df.columns}
+#     df.rename(columns=column_names, inplace=True)
+#
+#     # Filter data for specified dates
+#     df_filtered = df[df['Date'].isin(dates)]
+#
+#     # Identify numeric columns
+#     numeric_columns = df_filtered.select_dtypes(include=[np.number]).columns.tolist()
+#
+#     # Get top 5 columns for each date
+#     top_columns = []
+#     for date in dates:
+#         date_data = df_filtered[df_filtered['Date'] == date].iloc[0]
+#         top_5 = date_data[numeric_columns].nlargest(5).index.tolist()
+#         top_columns.extend(top_5)
+#
+#     top_columns = list(set(top_columns))
+#
+#     # Prepare data for alluvial diagram
+#     alluvial_data = []
+#     for date in dates:
+#         date_data = df_filtered[df_filtered['Date'] == date].iloc[0]
+#         sorted_cols = date_data[top_columns].sort_values(ascending=False)
+#         for i, (col, value) in enumerate(sorted_cols.items()):
+#             alluvial_data.append({'Date': date, 'Column': col, 'Rank': i + 1, 'Value': value})
+#
+#     alluvial_df = pd.DataFrame(alluvial_data)
+#
+#     # Create alluvial diagram
+#     plt.figure(figsize=(12, 8))
+#
+#     for col in top_columns:
+#         col_data = alluvial_df[alluvial_df['Column'] == col]
+#         plt.plot(col_data['Date'], col_data['Rank'], '-o', linewidth=2, markersize=8)
+#
+#         for i in range(len(col_data) - 1):
+#             x1, y1 = col_data.iloc[i]['Date'], col_data.iloc[i]['Rank']
+#             x2, y2 = col_data.iloc[i + 1]['Date'], col_data.iloc[i + 1]['Rank']
+#             plt.fill_between([x1, x2], [y1, y2], [y1 + 0.8, y2 + 0.8], alpha=0.3)
+#
+#     plt.gca().invert_yaxis()
+#     plt.ylabel('Rank')
+#     plt.title('Alluvial Diagram of Top 5 Columns')
+#     plt.gca().xaxis.set_major_formatter( mdates.DateFormatter('%Y-%m-%d'))
+#     plt.gcf().autofmt_xdate()  # Rotation
+#
+#     for i, date in enumerate(dates):
+#         date_data = alluvial_df[alluvial_df['Date'] == date]
+#         for _, row in date_data.iterrows():
+#             plt.text(row['Date'], row['Rank'], row['Column'], ha='right' if i == 0 else 'left', va='center')
+#
+#     plt.tight_layout()
+#     plt.show()
 
 # Define your dictionary mapping codes to descriptions
 code_to_description = {
@@ -1287,13 +1289,20 @@ def rename_columns_in_csv(input_file, output_file):
         df.to_csv(output_file, index=False)
 
 def make_yearly(path_in, csv, path_out):
-    df = pd.read_csv(path_in + csv)
+    if str(csv) != 'nan':
+        df = pd.read_csv(path_in + csv + '.csv')
 
-    df = df.rename(columns={df.columns[0]: 'date'})
-    df.set_index(df.columns[0], inplace=True)
-    df.index = pd.to_datetime(df.index, format='%Y-%m-%d %H:%M:%S')
-    df_quarterly = df.resample('Y').sum()
-    df_quarterly.index = pd.to_datetime(df_quarterly.index, format='%Y-%m')
-    df_quarterly.to_csv(path_out + csv)
+        df = df.rename(columns={df.columns[0]: 'date'})
+        df.set_index(df.columns[0], inplace=True)
+        try:
+            df.index = pd.to_datetime(df.index, format='%Y-%m-%d')
+        except ValueError:
+            try:
+                df.index = pd.to_datetime(df.index, format='%Y-%m-%d %H:%M:%S')
+            except ValueError:
+                raise ValueError("Date format is shit")
+        df_quarterly = df.resample('Y').sum()
+        df_quarterly.index = pd.to_datetime(df_quarterly.index, format='%Y')
+        df_quarterly.to_csv(path_out + csv + '.csv')
 
 
