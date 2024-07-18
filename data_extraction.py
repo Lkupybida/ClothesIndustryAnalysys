@@ -15,12 +15,12 @@ from typing import List, Tuple
 import colorsys
 import seaborn as sns
 from matplotlib.sankey import Sankey
-import holoviews as hv
-import hvplot.pandas
-from holoviews import opts
-from matplotlib.ticker import FuncFormatter
+# import holoviews as hv
+# import hvplot.pandas
+# from holoviews import opts
+# from matplotlib.ticker import FuncFormatter
 
-hv.extension('bokeh')
+#hv.extension('bokeh')
 
 def extract_bank_data(root_folder, sheet_name, column, file):
     target_banks = ["privatbank", "oschadbank", "ukreximbank", "ukrgasbank", "alfa", "sense", "first investment bank"]
