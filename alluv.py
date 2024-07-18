@@ -119,7 +119,7 @@ def create_bump_chart(csv_path, dates):
     for column in df_pivot.columns:
         data = df_plot[df_plot['Column'] == column]
         color = custom_cmap(norm(last_period_values.get(column, last_period_values.min())))
-        line, = plt.plot(data['Date'], data['Rank'], linewidth=10, label=column, color=color)
+        line, = plt.plot(data['Date'], data['Rank'], linewidth=40, label=column, color=color)
 
         # Add values on the plot
         for x, y, value in zip(data['Date'], data['Rank'], df_top[df_top['Column'] == column]['Value']):
