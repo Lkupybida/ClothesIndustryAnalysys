@@ -10,8 +10,8 @@ if __name__=="__main__":
     # make_quarterly('total_equity_capital.csv', False)
     # dolarize('total_income.csv')
     # dolarize('total_expenses.csv')
-    make_quarterly('total_income.csv', True, True)
-    make_quarterly('total_expenses.csv', True, True)
+    make_quarterly('total_assets_all.csv', False, False)
+    # make_quarterly('total_expenses.csv', True, True)
     # make_quarterly('iglb.csv', False)
     # get_loans_kved()
 
