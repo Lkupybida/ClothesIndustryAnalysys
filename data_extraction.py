@@ -1286,3 +1286,14 @@ def rename_columns_in_csv(input_file, output_file):
     # Save the updated CSV file
         df.to_csv(output_file, index=False)
 
+def make_yearly(path_in, csv, path_out):
+    df = pd.read_csv(path_in + csv)
+
+    df = df.rename(columns={df.columns[0]: 'date'})
+    df.set_index(df.columns[0], inplace=True)
+    df.index = pd.to_datetime(df.index, format='%Y-%m-%d %H:%M:%S')
+    df_quarterly = df.resample('Y').sum()
+    df_quarterly.index = pd.to_datetime(df_quarterly.index, format='%Y-%m')
+    df_quarterly.to_csv(path_out + csv)
+
+
