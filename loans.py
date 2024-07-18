@@ -55,9 +55,9 @@ def aggregate_data(output_csv):
 
 
 # Load the data
-df = pd.read_csv('data/quarterly/private_loans.csv')
-df.columns = ["date", "райффайзен", "укрсиббанк", "південний", "кредобанк", "універсал", "таскомбанк", "а-банк", "сітібанк", "агріколь", "отп", "прокредит", "інг"]
-banks = ["райффайзен", "укрсиббанк", "південний", "кредобанк", "універсал", "таскомбанк", "а-банк", "сітібанк", "агріколь", "отп", "прокредит", "інг"]
+df = pd.read_csv('data/dollarized_quaterly/interest_expenses.csv')
+df.columns = ["date", "privatbank", "oschadbank", "ukrgasbank", "ukrexim", "sense", "first investment"]
+banks = ["privatbank", "oschadbank", "ukrgasbank", "ukrexim", "sense", "first investment"]
 
 # Initialize an empty dictionary to store results
 result_data = {bank: [] for bank in banks}
@@ -67,7 +67,7 @@ result_data['date'] = []
 for _, row in df.iterrows():
     result_data['date'].append(row['date'])
     for bank in banks:
-        if row['date'] in ['2020-12-31', '2022-03-31', '2022-06-30', '2024-06-30']:
+        if row['date'] in ['2024-06-30']:
             result_data[bank].append((row[bank] / 2) * 3)
         else:
             result_data[bank].append(row[bank])
@@ -77,5 +77,5 @@ result_df = pd.DataFrame(result_data)
 
 # Save the result to a CSV file
 result_df.set_index('date', inplace=True)
-result_df.to_csv('data/quarterly/new_private_loans.csv')
+result_df.to_csv('data/dollarized_quaterly/new_interest_expenses.csv')
 
