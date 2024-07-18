@@ -1,29 +1,18 @@
+import seaborn as sns
 import pandas as pd
 import matplotlib.pyplot as plt
-import seaborn as sns
-from textwrap import wrap
-import os
-import pandas as pd
-import numpy as np
-from datetime import datetime
-from pandas.tseries.offsets import DateOffset
-import openpyxl
-import geopandas as gpd
-from matplotlib.colors import ListedColormap
-from matplotlib.colors import LinearSegmentedColormap, LogNorm
-from matplotlib.font_manager import FontProperties
+from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.patheffects import withStroke
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
-from typing import List, Tuple
-import colorsys
-import seaborn as sns
-from matplotlib.sankey import Sankey
-import holoviews as hv
-import hvplot.pandas
-from holoviews import opts
+from textwrap import wrap
+import matplotlib.lines as mlines
+import matplotlib.colors as mcolors
+import numpy as np
+import warnings
 
-def plot_alluvial_diagram_5(data_path, translation_path, dates):
+warnings.simplefilter(action='ignore', category=FutureWarning)
+
+def plot_alluvial_diagram_5(bank, bank_ukr, translation_path, dates):
+    data_path = 'data/loans/kved_named/loans/' + bank + '.csv'
     # Step 1: Read the main CSV data file into a pandas DataFrame
     data = pd.read_csv(data_path, parse_dates=['Date'], index_col='Date')
 
@@ -66,10 +55,21 @@ def plot_alluvial_diagram_5(data_path, translation_path, dates):
     sns.despine(left=True, bottom=True)
     plt.show()
 
+def create_log_colormap(colors, N=10000):
+    cdict = {'red': [], 'green': [], 'blue': []}
+    log_space = np.logspace(0, 1, len(colors), base=10.0)
+    log_space = (log_space - log_space.min()) / (log_space.max() - log_space.min())  # Normalize to 0-1
+    for i, color in enumerate(colors):
+        pos = log_space[i]
+        r, g, b = mcolors.to_rgb(color)
+        cdict['red'].append((pos, r, r))
+        cdict['green'].append((pos, g, g))
+        cdict['blue'].append((pos, b, b))
+    return LinearSegmentedColormap('log_cmap', segmentdata=cdict, N=N)
 
-def create_bump_chart(csv_path, dates):
-    # Read the CSV file
-    df = pd.read_csv(csv_path, parse_dates=['Date'])
+def create_bump_chart(bank, bank_ukr, dates):
+    data_path = 'data/loans/kved_named/loans/' + bank + '.csv'
+    df = pd.read_csv(data_path, parse_dates=['Date'])
 
     # Filter the dataframe for the specified dates
     df_filtered = df[df['Date'].isin(dates)]
@@ -103,9 +103,9 @@ def create_bump_chart(csv_path, dates):
     last_period_values = df_top[df_top['Date'] == df_top['Date'].max()].set_index('Column')['Value']
 
     # Create the custom color map
-    colors = ["#FFFFD8", "#b9e67f", "#8ECAE6", "#219ebc", "#003049"]
-    n_bins = 10000  # Discretizes the interpolation into bins
-    custom_cmap = LinearSegmentedColormap.from_list('custom_palette', colors, N=n_bins)
+    colors = ['#cead5f', "#FFFFD8", "#b9e67f", '#9ec56b', "#8ECAE6", "#219ebc", "#003049"]
+    n_bins = 100  # Discretizes the interpolation into bins
+    custom_cmap = create_log_colormap(colors)
 
     # Create the bump chart
     plt.figure(figsize=(14, 10))
@@ -119,7 +119,7 @@ def create_bump_chart(csv_path, dates):
     for column in df_pivot.columns:
         data = df_plot[df_plot['Column'] == column]
         color = custom_cmap(norm(last_period_values.get(column, last_period_values.min())))
-        line, = plt.plot(data['Date'], data['Rank'], linewidth=40, label=column, color=color)
+        plt.plot(data['Date'], data['Rank'], linewidth=30, label=column, color=color)
 
         # Add values on the plot
         for x, y, value in zip(data['Date'], data['Rank'], df_top[df_top['Column'] == column]['Value']):
@@ -129,14 +129,15 @@ def create_bump_chart(csv_path, dates):
 
     # Customize the plot
     plt.gca().invert_yaxis()  # Invert y-axis to have rank 1 at the top
-    plt.title('Bump Chart of Top 5 Columns Over Time', fontsize=16)
+    plt.title('Топ 5 видів діяльності під які ' + bank_ukr + ' видає кредити', fontsize=16)
     plt.xlabel('Date', fontsize=12)
     plt.ylabel('Rank', fontsize=12)
 
-    # Modify legend to allow text wrapping
+    # Modify legend to allow text wrapping with smaller linewidth
     handles, labels = plt.gca().get_legend_handles_labels()
-    plt.legend(handles, ['\n'.join(wrap(l, 40)) for l in labels],
-               title='КВЕД', bbox_to_anchor=(1.05, 1), loc='upper left')
+    custom_handles = [mlines.Line2D([], [], color=handle.get_color(), linewidth=5) for handle in handles]
+    plt.legend(custom_handles, ['\n'.join(wrap(l, 40)) for l in labels],
+               title='КВЕД\n(число позначає обсяг кредитів у млрд грн)', bbox_to_anchor=(1.05, 1), loc='upper left')
 
     # Set y-axis limits
     plt.ylim(max_rank + 1.5, 0.5)
