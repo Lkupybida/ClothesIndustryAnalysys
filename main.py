@@ -1,6 +1,8 @@
+import pandas as pd
+
 from data_extraction import *
 
-if __name__=="__main__":
+if __name__ == "__main__":
     # make_quarterly('total_income.csv')
     # make_quarterly('net_interest_income.csv')
     # make_quarterly('administrative_expenses.csv')
@@ -21,7 +23,12 @@ if __name__=="__main__":
     #plot_bank_filials('original_dataset/filials_oschad.csv')
     #extract_filials()
     # read_unique_csv('original_dataset/Loans_KVED_2024-06-01 - Sheet1.csv', 'original_dataset/Loans_KVED_2024-06-01 - Sheet2.csv')
-    bank_names_df = pd.read_csv('original_dataset/names.csv', header=None, names=['English', 'Ukrainian'])
-    for bank in bank_names_df['English']:
-        rename_columns_in_csv('data/loans/grouped/loans/' + str(bank) + '.csv', 'data/loans/kved_named/loans/' + str(bank) + '.csv')
-        make_yearly('data/loans/kved_named/loans/' , bank, 'data/loans/kved_yearly/loans/')
+
+
+    # bank_names_df = pd.read_csv('original_dataset/names.csv', header=None, names=['English', 'Ukrainian'])
+    # for bank in bank_names_df['English']:
+    #     rename_columns_in_csv('data/loans/grouped/loans/' + str(bank) + '.csv', 'data/loans/kved_named/loans/' + str(bank) + '.csv')
+    #     make_yearly('data/loans/kved_named/loans/' , bank, 'data/loans/kved_yearly/loans/')
+    # rename_columns_in_csv('data/loans/kved_named/loans/SENSE_BANK.csv',
+    #                       'data/loans/kved_named/loans/SENSE_BANK.csv')
+    make_yearly('data/loans/kved_named/loans/', 'SENSE_BANK', 'data/loans/kved_yearly/loans/')
