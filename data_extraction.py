@@ -553,10 +553,10 @@ def plot_bank_filials(bank):
 
     # Plot regions with count > 0
     regions_plot = ukraine[ukraine['count'] > 0].plot(column='count', ax=ax, legend=False,
-                                                      cmap=custom_cmap, norm=norm)
+                                                      cmap=custom_cmap, norm=norm, edgecolor='darkgrey')
 
     # Handle regions with count == 0 by setting them to light gray
-    ukraine[ukraine['count'] == 0].plot(ax=ax, color='lightgrey', hatch='///')
+    ukraine[ukraine['count'] == 0].plot(ax=ax, color='grey', hatch='///', edgecolor='darkgrey')
 
     # Annotate each region with count value
     for idx, row in ukraine.iterrows():
@@ -608,7 +608,7 @@ def plot_bank_filials(bank):
     # Remove axis and grid
     ax.axis('off')
     ax.grid(False)
-
+    plt.style.use('dark_background')
     # Add a title
     plt.title('Кількість підрозділів ' + bank + 'у по регіонах (логарифмічний масштаб)', fontsize=16)
 

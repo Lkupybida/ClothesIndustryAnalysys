@@ -248,8 +248,8 @@ def create_bump_chart_2(bank, bank_ukr, dates, color_list=None):
         for x, y, value in zip(data['date'], data['Rank'], df_top[df_top['Column'] == column]['Value']):
             if y <= max_rank:
                 ax1.text(x, y + 0.15, f'{round(value / divider, 1)}', ha='right', va='bottom', fontsize=20,
-                         color='black',
-                         path_effects=[withStroke(linewidth=2, foreground='white')])
+                         color='white',
+                         path_effects=[withStroke(linewidth=2, foreground='black')])
     plt.tight_layout(pad=0.5)
     fig.subplots_adjust(hspace=-0.2)
     # Customize the main plot
@@ -288,8 +288,8 @@ def create_bump_chart_2(bank, bank_ukr, dates, color_list=None):
     # Adjust layout
     plt.tight_layout()
     fig.subplots_adjust(hspace=-0.25 + remove)  # Reduce space between plot and legend
-    mplcursors.cursor()
-    cursor = mplcursors.cursor(ax1.get_lines(), hover=True)
+    # mplcursors.cursor()
+    # cursor = mplcursors.cursor(ax1.get_lines(), hover=True)
     # Show the plot
     plt.show()
 # =======
