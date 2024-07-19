@@ -1305,4 +1305,6 @@ def make_yearly(path_in, csv, path_out):
         df_quarterly.index = pd.to_datetime(df_quarterly.index, format='%Y')
         df_quarterly.to_csv(path_out + csv + '.csv')
 
+de
+
 
