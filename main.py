@@ -31,4 +31,4 @@ if __name__ == "__main__":
     #     make_yearly('data/loans/kved_named/loans/' , bank, 'data/loans/kved_yearly/loans/')
     # rename_columns_in_csv('data/loans/kved_named/loans/SENSE_BANK.csv',
     #                       'data/loans/kved_named/loans/SENSE_BANK.csv')
-    make_yearly('data/loans/kved_named/loans/', 'SENSE_BANK', 'data/loans/kved_yearly/loans/')
+    # make_yearly('data/loans/kved_named/loans/', 'SENSE_BANK', 'data/loans/kved_yearly/loans/')
