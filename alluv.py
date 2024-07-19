@@ -1,3 +1,4 @@
+import matplotlib
 import seaborn as sns
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -8,13 +9,13 @@ import matplotlib.lines as mlines
 import matplotlib.colors as mcolors
 import numpy as np
 import warnings
-<<<<<<< Updated upstream
 import matplotlib.dates as mdates
-=======
 from matplotlib.path import Path
 import matplotlib.dates as mdates
 from matplotlib.patches import PathPatch
->>>>>>> Stashed changes
+import mplcursors
+from mpldatacursor import datacursor
+matplotlib.use('TkAgg')
 
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
@@ -226,7 +227,7 @@ def create_bump_chart_2(bank, bank_ukr, dates, color_list=None):
         # Apply colors based on the mapping
         default_colors = [color_mapping[col] for col in df_pivot.columns]
 
-<<<<<<< Updated upstream
+# <<<<<<< Updated upstream
     # Create the bump chart
     # plt.figure(figsize=(14, 10))
 
@@ -254,12 +255,14 @@ def create_bump_chart_2(bank, bank_ukr, dates, color_list=None):
     # Customize the main plot
     ax1.invert_yaxis()
     # ax1.legend(title='(число позначає обсяг кредитів у ' + bil + ' грн)')
-    ax1.set_title('Топ 5 видів діяльності під які ' + bank_ukr + ' видає кредити', fontsize=20)
-    ax1.set_xlabel('Date', fontsize=12)
+    ax1.set_title('Топ 5 видів діяльності під які ' + bank_ukr + ' видає кредити\n', fontsize=20)
+    # ax1.set_xlabel('Date', fontsize=12)
     ax1.set_ylabel('Rank', fontsize=12)
     ax1.set_ylim(max_rank + 1.5, 0.5)
+    ax1.xaxis.set_ticks_position('top')
+    ax1.xaxis.set_label_position('top')
     ax1.set_xticks(dates)
-    ax1.set_xticklabels(dates, rotation=0, ha='right')
+    ax1.set_xticklabels(dates, rotation=0, ha='right', fontsize=20)
     ax1.grid(False)
     ax1.spines['left'].set_visible(False)  # Hide the left spine (y-axis)
     ax1.yaxis.set_ticks([])  # Remove y-axis ticks
@@ -285,52 +288,53 @@ def create_bump_chart_2(bank, bank_ukr, dates, color_list=None):
     # Adjust layout
     plt.tight_layout()
     fig.subplots_adjust(hspace=-0.25 + remove)  # Reduce space between plot and legend
-
+    mplcursors.cursor()
+    cursor = mplcursors.cursor(ax1.get_lines(), hover=True)
     # Show the plot
     plt.show()
-=======
+# =======
         # Create the bump chart
-        plt.figure(figsize=(16, 10))
+        # plt.figure(figsize=(16, 10))
+        #
+        # # Melt the pivot table back to long format
+        # df_plot = df_pivot.reset_index().melt(id_vars=['date'], var_name='Column', value_name='Rank')
+        #
+        # for idx, column in enumerate(df_pivot.columns):
+        #     data = df_plot[df_plot['Column'] == column]
+        #     color = default_colors[idx % len(default_colors)]  # Cycle through colors
+        #
+        #     # Plot the lines
+        #     plt.plot(data['date'], data['Rank'], linewidth=5, color=color, label=column)
+        #
+        #     # Add values on the plot
+        #     for x, y, value in zip(data['date'], data['Rank'], df_top[df_top['Column'] == column]['Value']):
+        #         if y <= max_rank:  # Only add label if the point is in the top 5
+        #             plt.text(x, y, f'{round(value / 1000000, 1)}', ha='right', va='bottom', fontsize=10, color='black',
+        #                      path_effects=[withStroke(linewidth=2, foreground='white')])
+        #
+        # # Customize the plot
+        # plt.gca().invert_yaxis()  # Invert y-axis to have rank 1 at the top
+        # plt.title('Топ 5 видів діяльності під які ' + bank_ukr + ' видає кредити', fontsize=16)
+        # plt.xlabel('Date', fontsize=12)
+        # plt.ylabel('Rank', fontsize=12)
+        #
+        # # Modify legend to allow text wrapping with smaller linewidth
+        # handles, labels = plt.gca().get_legend_handles_labels()
+        # plt.legend(['\n'.join(wrap(l, 40)) for l in labels],
+        #            title='КВЕД\n(число позначає обсяг кредитів у млрд грн)',
+        #            bbox_to_anchor=(1.05, 1), loc='upper left')
+        #
+        # # Set y-axis limits
+        # plt.ylim(max_rank + 0.5, 0.5)
+        #
+        # # Set x-axis to show all dates
+        # plt.xticks(dates, [d.strftime('%Y-%m-%d') for d in dates], rotation=45, ha='right')
+        #
+        # # Adjust layout to prevent cropping of wrapped legend text
+        # plt.tight_layout()
+        # plt.subplots_adjust(right=0.75)  # Adjust this value as needed
+        #
+        # # Show the plot
+        # plt.show()
 
-        # Melt the pivot table back to long format
-        df_plot = df_pivot.reset_index().melt(id_vars=['date'], var_name='Column', value_name='Rank')
-
-        for idx, column in enumerate(df_pivot.columns):
-            data = df_plot[df_plot['Column'] == column]
-            color = default_colors[idx % len(default_colors)]  # Cycle through colors
-
-            # Plot the lines
-            plt.plot(data['date'], data['Rank'], linewidth=5, color=color, label=column)
-
-            # Add values on the plot
-            for x, y, value in zip(data['date'], data['Rank'], df_top[df_top['Column'] == column]['Value']):
-                if y <= max_rank:  # Only add label if the point is in the top 5
-                    plt.text(x, y, f'{round(value / 1000000, 1)}', ha='right', va='bottom', fontsize=10, color='black',
-                             path_effects=[withStroke(linewidth=2, foreground='white')])
-
-        # Customize the plot
-        plt.gca().invert_yaxis()  # Invert y-axis to have rank 1 at the top
-        plt.title('Топ 5 видів діяльності під які ' + bank_ukr + ' видає кредити', fontsize=16)
-        plt.xlabel('Date', fontsize=12)
-        plt.ylabel('Rank', fontsize=12)
-
-        # Modify legend to allow text wrapping with smaller linewidth
-        handles, labels = plt.gca().get_legend_handles_labels()
-        plt.legend(['\n'.join(wrap(l, 40)) for l in labels],
-                   title='КВЕД\n(число позначає обсяг кредитів у млрд грн)',
-                   bbox_to_anchor=(1.05, 1), loc='upper left')
-
-        # Set y-axis limits
-        plt.ylim(max_rank + 0.5, 0.5)
-
-        # Set x-axis to show all dates
-        plt.xticks(dates, [d.strftime('%Y-%m-%d') for d in dates], rotation=45, ha='right')
-
-        # Adjust layout to prevent cropping of wrapped legend text
-        plt.tight_layout()
-        plt.subplots_adjust(right=0.75)  # Adjust this value as needed
-
-        # Show the plot
-        plt.show()
->>>>>>> Stashed changes
 
