@@ -17,7 +17,7 @@ if __name__ == "__main__":
     # make_quarterly('iglb.csv', False)
     # get_loans_kved()
 
-    # process_loan_data('original_dataset/Loans_KVED', 'original_dataset/names.csv')
+    process_loan_data('original_dataset/Loans_KVED', 'original_dataset/names.csv')
     # group_banks_wrapper()
 
     #plot_bank_filials('original_dataset/filials_oschad.csv')
@@ -27,7 +27,7 @@ if __name__ == "__main__":
 
     # bank_names_df = pd.read_csv('original_dataset/names.csv', header=None, names=['English', 'Ukrainian'])
     # for bank in bank_names_df['English']:
-    #     rename_columns_in_csv('data/loans/grouped/loans/' + str(bank) + '.csv', 'data/loans/kved_named/loans/' + str(bank) + '.csv')
+    #     rename_columns_in_csvcsv('data/loans/grouped/loans/' + str(bank) + '.csv', 'data/loans/kved_named/loans/' + str(bank) + '.csv')
     #     make_yearly('data/loans/kved_named/loans/' , bank, 'data/loans/kved_yearly/loans/')
     # rename_columns_in_csv('data/loans/kved_named/loans/SENSE_BANK.csv',
     #                       'data/loans/kved_named/loans/SENSE_BANK.csv')
