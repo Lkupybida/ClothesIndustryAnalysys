@@ -8,6 +8,7 @@ import matplotlib.lines as mlines
 import matplotlib.colors as mcolors
 import numpy as np
 import warnings
+import matplotlib.dates as mdates
 
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
@@ -226,7 +227,7 @@ def create_bump_chart_2(bank, bank_ukr, dates, color_list=None):
     df_plot = df_pivot.reset_index().melt(id_vars=['date'], var_name='Column', value_name='Rank')
     # Create a figure with two subplots (main plot and legend)
     # Create a figure with two subplots (main plot and legend)
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 11), height_ratios=[5, 1])
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(16, 12), height_ratios=[5, 1])
     ax1.legend(title='(число позначає обсяг кредитів у ' + bil + ' грн)', loc='lower right', facecolor='None', edgecolor='None', bbox_to_anchor=anchor)
 
     # Main plot code (using ax1 instead of plt)
@@ -251,14 +252,23 @@ def create_bump_chart_2(bank, bank_ukr, dates, color_list=None):
     ax1.set_ylabel('Rank', fontsize=12)
     ax1.set_ylim(max_rank + 1.5, 0.5)
     ax1.set_xticks(dates)
-    ax1.set_xticklabels(dates, rotation=45, ha='right')
+    ax1.set_xticklabels(dates, rotation=0, ha='right')
     ax1.grid(False)
-    ax1.axis('off')
+    ax1.spines['left'].set_visible(False)  # Hide the left spine (y-axis)
+    ax1.yaxis.set_ticks([])  # Remove y-axis ticks
+
+    # Optionally, hide the top and right spines (to make the plot cleaner)
+    ax1.spines['top'].set_visible(False)
+    ax1.spines['right'].set_visible(False)
+    # ax1.xticks(rotation=0)
+    ax1.xaxis.set_major_formatter(mdates.DateFormatter('%Y'))
+    plt.xticks(rotation=0)
+    # ax1.axis('off')
 
     # Create custom legend
     handles, labels = ax1.get_legend_handles_labels()
     ax2.axis('off')
-    custom_handles = [mlines.Line2D([], [], color=handle.get_color(), linewidth=5) for handle in handles]
+    custom_handles = [mlines.Line2D([], [], color=handle.get_color(), linewidth=15) for handle in handles]
     legend = ax2.legend(custom_handles, ['\n'.join(wrap(l, 60)) for l in labels],
                         title='КВЕД',
                         loc='center', ncol=3, fontsize=10)
